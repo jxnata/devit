@@ -69,6 +69,22 @@ const MIGRATIONS: string[] = [
   CREATE INDEX runs_persona ON runs (persona, started_at);
   CREATE INDEX runs_status ON runs (status);
   `,
+  `
+  CREATE TABLE routines (
+    id          INTEGER PRIMARY KEY,
+    name        TEXT NOT NULL UNIQUE,
+    persona     TEXT NOT NULL,
+    project_id  INTEGER REFERENCES projects(id) ON DELETE CASCADE,
+    schedule    TEXT NOT NULL,
+    playbook    TEXT,
+    prompt      TEXT,
+    enabled     INTEGER NOT NULL DEFAULT 1,
+    next_run_at TEXT NOT NULL,
+    last_run_id INTEGER REFERENCES runs(id) ON DELETE SET NULL,
+    created_at  TEXT NOT NULL
+  );
+  ALTER TABLE runs ADD COLUMN routine_id INTEGER REFERENCES routines(id) ON DELETE SET NULL;
+  `,
 ];
 
 export const SCHEMA_VERSION = MIGRATIONS.length;

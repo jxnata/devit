@@ -50,7 +50,7 @@ devit task show 1
 Columns: `backlog` → `todo` → `doing` → `review` → `done`.
 
 - **backlog**: ideas, and tasks routines create, not yet approved.
-- **todo**: approved. A persona with autopickup starts it (with `devit serve`, coming in phase 3).
+- **todo**: approved. While `devit serve` runs, a persona with autopickup starts it.
 - **doing**: in progress.
 - **review**: waiting for you: a PR to merge, a post to approve, a question.
 - **done**.
@@ -74,3 +74,15 @@ devit task show 1                  # its comment, now in review
 ```
 
 See [Personas](personas.md) and [Runs and memory](runs-and-memory.md).
+
+## 5. Routines, the daemon and the lead
+
+```sh
+devit persona add lead --role "Team lead" --lead
+devit ask "What should we do next on this project?"
+devit routine add weekly --persona lead --cron "0 9 * * 1" --prompt "Review the board and comment a weekly summary"
+devit serve        # leave it running (see docs/daemon.md for systemd)
+```
+
+Set `autopickup: true` in a persona's file. From then on, moving a task assigned to it into To do is
+enough to get it worked on while `devit serve` runs. See [Routines, the daemon and the lead](daemon.md).

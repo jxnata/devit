@@ -27,7 +27,7 @@ export function sandbox(): Sandbox {
     root,
     home,
     devit(args, opts = {}) {
-      const env: Record<string, string | undefined> = { ...process.env, DEVIT_HOME: home, ...opts.env };
+      const env: Record<string, string | undefined> = { ...process.env, TZ: "UTC", DEVIT_HOME: home, ...opts.env };
       if (!opts.env?.DEVIT_PERSONA) delete env.DEVIT_PERSONA;
       const res = Bun.spawnSync([process.execPath, CLI, ...args], {
         cwd: opts.cwd ?? root,

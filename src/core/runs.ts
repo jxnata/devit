@@ -16,6 +16,7 @@ export interface Run {
   project: string | null;
   task_id: number | null;
   playbook: string | null;
+  routine_id: number | null;
   trigger: Trigger;
   status: RunStatus;
   summary: string | null;
@@ -42,18 +43,26 @@ export function getRun(db: Database, id: number): Run {
 
 export function createRun(
   db: Database,
-  input: { persona: string; projectId: number | null; taskId?: number | null; playbook?: string | null; trigger: Trigger },
+  input: {
+    persona: string;
+    projectId: number | null;
+    taskId?: number | null;
+    playbook?: string | null;
+    routineId?: number | null;
+    trigger: Trigger;
+  },
 ): Run {
   const row = db
     .query(
-      `INSERT INTO runs (persona, project_id, task_id, playbook, trigger, started_at)
-       VALUES ($persona, $project_id, $task_id, $playbook, $trigger, $started_at) RETURNING id`,
+      `INSERT INTO runs (persona, project_id, task_id, playbook, routine_id, trigger, started_at)
+       VALUES ($persona, $project_id, $task_id, $playbook, $routine_id, $trigger, $started_at) RETURNING id`,
     )
     .get({
       persona: input.persona,
       project_id: input.projectId,
       task_id: input.taskId ?? null,
       playbook: input.playbook ?? null,
+      routine_id: input.routineId ?? null,
       trigger: input.trigger,
       started_at: now(),
     }) as { id: number };
@@ -83,6 +92,7 @@ export function updateRun(db: Database, id: number, patch: RunPatch): Run {
 
 export interface RunFilter {
   persona?: string;
+  routineId?: number;
   projectId?: number;
   statuses?: RunStatus[];
   limit?: number;
@@ -94,6 +104,10 @@ export function listRuns(db: Database, filter: RunFilter = {}): Run[] {
   if (filter.persona) {
     where.push("r.persona = $persona");
     params.persona = filter.persona;
+  }
+  if (filter.routineId !== undefined) {
+    where.push("r.routine_id = $routine_id");
+    params.routine_id = filter.routineId;
   }
   if (filter.projectId !== undefined) {
     where.push("r.project_id = $project_id");
@@ -107,12 +121,29 @@ export function listRuns(db: Database, filter: RunFilter = {}): Run[] {
     .all(params) as Run[];
 }
 
-/** Runs left `running` by a process that no longer exists (crash, reboot) are marked failed. */
+/**
+ * Runs left `running` by a process that no longer exists (crash, reboot) are marked failed,
+ * and a task they left in doing goes back to the backlog with a comment.
+ */
 export function reapOrphans(db: Database): number {
   let reaped = 0;
   for (const run of listRuns(db, { statuses: ["running"], limit: 1000 })) {
+    if (!run.pid && Date.now() - Date.parse(run.started_at) < 60_000) continue; // still starting
     if (run.pid && isAlive(run.pid)) continue;
-    updateRun(db, run.id, { status: "failed", error: "the run's process exited without reporting", finished_at: now() });
+    const error = "the run's process exited without reporting";
+    updateRun(db, run.id, { status: "failed", error, finished_at: now() });
+    if (run.task_id) {
+      const moved = db
+        .query("UPDATE tasks SET status = 'backlog', updated_at = $now WHERE id = $id AND status = 'doing'")
+        .run({ id: run.task_id, now: now() });
+      if (moved.changes) {
+        db.query("INSERT INTO comments (task_id, author, body, created_at) VALUES ($task, 'devit', $body, $now)").run({
+          task: run.task_id,
+          body: `Run #${run.id} (${run.persona}) failed: ${error}. Moved to backlog; move it to To do to retry.`,
+          now: now(),
+        });
+      }
+    }
     reaped++;
   }
   return reaped;

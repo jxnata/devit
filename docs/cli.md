@@ -375,6 +375,173 @@ Global options:
   -h, --help            show help
 ```
 
+## devit ask
+
+```
+Talk to the lead persona: ask, plan or delegate work
+
+Usage: devit ask <message> [options]
+
+Runs the lead persona on your message, in the current project (or across projects outside one),
+and prints its answer. The lead can read the board and memory and create tasks for the others.
+--continue picks up the last conversation in this project.
+
+Examples:
+  devit ask "What is in review and what is blocked?"
+  devit ask "Plan the checkout redesign and split it into tasks for dev and writer"
+  devit ask --continue "Make the second task high priority"
+
+Options:
+  -c, --continue        continue the last conversation with the lead here
+      --persona <name>  talk to another persona instead of the lead
+  -q, --quiet           print only the answer
+
+Global options:
+  -p, --project <slug>  project to act on (default: the .devit/ above the current directory)
+      --json            print JSON instead of text
+  -h, --help            show help
+```
+
+## devit routine add
+
+```
+Schedule a persona to run a playbook or prompt on a cron
+
+Usage: devit routine add <name> [options]
+
+Routines run while `devit serve` is up. A run missed while it was down runs once when it starts.
+The schedule is cron in this machine's local time (set TZ to change it):
+minute hour day-of-month month day-of-week, or @hourly, @daily, @weekly, @monthly.
+
+Examples:
+  devit routine add weekly-report --persona pm --cron "0 9 * * 1" --playbook weekly-report
+  devit routine add sentry-triage --persona dev --cron "0 8 * * 1-5" --playbook sentry
+  devit routine add friday-summary --persona pm --cron "0 17 * * fri" --global --prompt "Summarize the week across projects"
+
+Options:
+      --persona <name>   who runs it (required)
+      --cron <expr>      when, e.g. "0 9 * * 1" (required)
+      --playbook <name>  playbook to follow
+      --prompt <text>    what to do, or extra instructions with --playbook
+      --global           not tied to the current project
+
+Global options:
+  -p, --project <slug>  project to act on (default: the .devit/ above the current directory)
+      --json            print JSON instead of text
+  -h, --help            show help
+```
+
+## devit routine list
+
+```
+List routines with their next run
+
+Usage: devit routine list [options]
+
+Options:
+  -a, --all  every project, not just the current one
+
+Global options:
+  -p, --project <slug>  project to act on (default: the .devit/ above the current directory)
+      --json            print JSON instead of text
+  -h, --help            show help
+```
+
+## devit routine show
+
+```
+Show a routine
+
+Usage: devit routine show <name> [options]
+
+Global options:
+  -p, --project <slug>  project to act on (default: the .devit/ above the current directory)
+      --json            print JSON instead of text
+  -h, --help            show help
+```
+
+## devit routine run
+
+```
+Run a routine now, in the foreground (its schedule is unchanged)
+
+Usage: devit routine run <name> [options]
+
+Options:
+  -q, --quiet  don't stream the agent's progress
+
+Global options:
+  -p, --project <slug>  project to act on (default: the .devit/ above the current directory)
+      --json            print JSON instead of text
+  -h, --help            show help
+```
+
+## devit routine pause
+
+```
+Stop a routine from running until resumed
+
+Usage: devit routine pause <name> [options]
+
+Global options:
+  -p, --project <slug>  project to act on (default: the .devit/ above the current directory)
+      --json            print JSON instead of text
+  -h, --help            show help
+```
+
+## devit routine resume
+
+```
+Resume a paused routine from its next scheduled time
+
+Usage: devit routine resume <name> [options]
+
+Global options:
+  -p, --project <slug>  project to act on (default: the .devit/ above the current directory)
+      --json            print JSON instead of text
+  -h, --help            show help
+```
+
+## devit routine remove
+
+```
+Delete a routine (its past runs stay)
+
+Usage: devit routine remove <name> [options]
+
+Global options:
+  -p, --project <slug>  project to act on (default: the .devit/ above the current directory)
+      --json            print JSON instead of text
+  -h, --help            show help
+```
+
+## devit serve
+
+```
+Run the daemon: routines on schedule and autopickup of tasks
+
+Usage: devit serve [options]
+
+Keeps running until stopped (Ctrl-C or SIGTERM, which interrupts running agents cleanly).
+Every --interval seconds it starts:
+  - routines whose time came; one missed while the daemon was down runs once on start
+  - tasks in To do assigned to a persona with `autopickup: true` (a failure sends them to the backlog)
+A persona runs one thing at a time. Only one daemon runs per DEVIT_HOME.
+
+--once does a single pass and waits for its runs, for system cron or CI.
+See docs/daemon.md to keep it running with systemd.
+
+Options:
+      --once                one pass: start what is due, wait for it, exit
+      --interval <seconds>  how often to look for work (default 30)
+      --max-parallel <n>    runs at the same time (default 3)
+
+Global options:
+  -p, --project <slug>  project to act on (default: the .devit/ above the current directory)
+      --json            print JSON instead of text
+  -h, --help            show help
+```
+
 ## devit memory add
 
 ```

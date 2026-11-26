@@ -1,3 +1,4 @@
+import { localTime, usd } from "../core/format.ts";
 import { existsSync, readFileSync } from "node:fs";
 import { DevitError } from "../core/errors.ts";
 import { getPersona } from "../core/personas.ts";
@@ -21,7 +22,7 @@ function duration(run: Run): string {
 }
 
 function cost(run: Run): string {
-  return run.cost_usd == null ? "-" : `$${run.cost_usd.toFixed(2)}`;
+  return usd(run.cost_usd);
 }
 
 function what(run: Run): string {
@@ -84,12 +85,17 @@ Examples:
 
       const stream = !ctx.json && !ctx.values.quiet;
       if (stream) ctx.out(`Running ${persona.name}${task ? ` on #${task.id}` : ""}…`);
+      const controller = new AbortController();
+      const interrupt = () => controller.abort();
+      process.once("SIGINT", interrupt);
       const run = await executeRun({
         db,
         ...job,
         trigger: task ? "task" : "manual",
+        signal: controller.signal,
         onEvent: stream ? (line) => ctx.out(line.split("\n").map((l) => `  ${l}`).join("\n")) : undefined,
       });
+      process.off("SIGINT", interrupt);
       ctx.emit(run, () =>
         [
           "",
@@ -146,7 +152,7 @@ Examples:
           : table(
               runs.map((r) => [
                 `#${r.id}`,
-                r.started_at.slice(0, 16).replace("T", " "),
+                localTime(r.started_at),
                 r.persona,
                 r.project ?? "-",
                 what(r),
@@ -179,7 +185,7 @@ Examples:
         [
           `Run #${run.id}: ${run.persona} on ${what(run)} (${run.project ?? "no project"})`,
           `  status:  ${run.status}`,
-          `  started: ${run.started_at.slice(0, 19).replace("T", " ")} (${run.trigger})`,
+          `  started: ${localTime(run.started_at, true)} (${run.trigger})`,
           `  time:    ${duration(run)}`,
           `  cost:    ${cost(run)}${run.turns ? `, ${run.turns} turns` : ""}`,
           ...(run.session_id ? [`  session: ${run.session_id}`] : []),

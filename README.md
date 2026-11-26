@@ -11,8 +11,8 @@ Devit has no LLM runtime of its own. The work runs in a headless coding agent
 ([Claude Code](https://docs.claude.com/en/docs/claude-code) today, Codex later), with the tools, MCP servers and
 skills it already has. Devit decides who runs, when, with which context, and keeps the result.
 
-> **Status: early (v0.2).** Projects, the task board, personas, memory and one-off runs work from the CLI.
-> Routines, `devit ask`, the web board and the agent skill are next. See the [roadmap](docs/roadmap.md).
+> **Status: early (v0.3).** Projects, the task board, personas, memory, runs, routines, the daemon and
+> `devit ask` work from the CLI. The web board and the agent skill are next. See the [roadmap](docs/roadmap.md).
 
 ## Install
 
@@ -43,6 +43,11 @@ devit persona add dev --role "Developer" --model opus   # then edit ~/.devit/per
 devit run dev --task 1                      # the agent works; the task goes to review
 devit runs
 devit memory add deploy -d "Deploys go through a PR to main"
+
+devit persona add lead --role "Team lead" --lead
+devit ask "Split the launch into tasks for dev and writer"
+devit routine add weekly --persona lead --cron "0 9 * * 1" --prompt "Write the weekly report as a task comment"
+devit serve                                 # routines on schedule + autopickup of To do tasks
 ```
 
 Every command accepts `--json`, which is what agents use.
@@ -53,6 +58,7 @@ Every command accepts `--json`, which is what agents use.
 - [Concepts](docs/concepts.md): projects, tasks, personas, routines, memory
 - [Personas](docs/personas.md)
 - [Runs and memory](docs/runs-and-memory.md)
+- [Routines, the daemon and the lead](docs/daemon.md)
 - [CLI reference](docs/cli.md)
 - [Roadmap](docs/roadmap.md)
 

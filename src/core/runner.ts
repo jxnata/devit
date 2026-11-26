@@ -34,11 +34,13 @@ export interface Job {
   prompt?: string | null;
 }
 
+const LEAD_GUIDE = `You are the lead. You coordinate the team: turn requests into tasks for the persona that fits (\`devit task add "..." --persona <name> --status todo\`), follow up on the board, and answer questions about the work. Do specialized work yourself only when no persona fits or it is quick.`;
+
 const CLI_GUIDE = `Use the \`devit\` CLI to report and coordinate. Your persona, project and run are already set in the environment, so don't pass them.
 - \`devit task list --json\`, \`devit task show <id> --json\`: the board
 - \`devit task add "title" --body "..." [--persona <name>] [--status todo]\`: create follow-up work (backlog unless it is clearly approved)
 - \`devit task comment <id> "text"\`: talk about a task; questions for the human go here
-- \`devit task move <id> <backlog|todo|doing|review|done>\`, \`devit task link <id> --pr <url>\`
+- \`devit task move <id> <backlog|todo|doing|review|done>\`, \`devit task assign <id> <persona|none>\`, \`devit task link <id> --pr <url>\`
 - \`devit memory add <name> --description "one line" --body "..." [--scope global|project|persona]\`: save a durable fact worth knowing next time (kebab-case name; same name replaces it)
 - \`devit memory show <name>\`, \`devit memory search <term>\`: read what was saved
 
@@ -65,6 +67,7 @@ export function buildPrompt(job: Job, runId: number | null, db: Database): { sys
     `You are "${persona.name}" (${persona.role}), a persona in Devit, running headless${runId ? ` as run #${runId}` : ""}. Today is ${new Date().toISOString().slice(0, 10)}.`,
     where,
     CLI_GUIDE,
+    ...(persona.lead ? [LEAD_GUIDE] : []),
     "# Memory",
     "Indexes only; read an entry with `devit memory show <name>`.",
     memoryIndex(visibleScopes(project?.slug, persona.name)),
@@ -98,8 +101,9 @@ export function claudeBin(): string {
   return process.env.DEVIT_CLAUDE_BIN || "claude";
 }
 
-export function claudeArgs(persona: Persona, system: string): string[] {
+export function claudeArgs(persona: Persona, system: string, resume?: string | null): string[] {
   const args = ["-p", "--output-format", "stream-json", "--verbose", "--append-system-prompt", system];
+  if (resume) args.push("--resume", resume);
   if (persona.model) args.push("--model", persona.model);
   if (persona.effort) args.push("--effort", persona.effort);
   if (persona.permission_mode) args.push("--permission-mode", persona.permission_mode);
@@ -138,14 +142,27 @@ export function describeEvent(event: any): string | null {
 export interface ExecuteOptions extends Job {
   db: Database;
   trigger: Trigger;
+  routineId?: number | null;
+  /** Claude session to continue (`--resume`). */
+  resume?: string | null;
+  /** Where the task goes if the run fails. Default: back where it was. */
+  failStatus?: Status;
+  /** Aborting kills the agent; the run is recorded as failed ("interrupted"). */
+  signal?: AbortSignal;
+  onStart?: (run: Run) => void;
   onEvent?: (line: string) => void;
 }
+
+export type RunResult = Run & {
+  /** The agent's final message. */
+  output: string | null;
+};
 
 /**
  * Runs a persona once: records the run, moves its task to doing, streams the agent's
  * output to runs/<id>.jsonl, then settles the run and the task.
  */
-export async function executeRun(opts: ExecuteOptions): Promise<Run> {
+export async function executeRun(opts: ExecuteOptions): Promise<RunResult> {
   const { db, persona, project } = opts;
   let task = opts.task ?? null;
   if (task && project && task.project_id !== project.id) {
@@ -156,8 +173,10 @@ export async function executeRun(opts: ExecuteOptions): Promise<Run> {
     projectId: project?.id ?? null,
     taskId: task?.id ?? null,
     playbook: opts.playbook ?? null,
+    routineId: opts.routineId ?? null,
     trigger: opts.trigger,
   });
+  opts.onStart?.(run);
   let prompt: { system: string; user: string };
   try {
     prompt = buildPrompt(opts, run.id, db);
@@ -189,8 +208,11 @@ export async function executeRun(opts: ExecuteOptions): Promise<Run> {
   let error: string | null = null;
   let exitCode: number | null = null;
   let timedOut = false;
+  let interrupted = false;
+  let onAbort: (() => void) | null = null;
   try {
-    const child = Bun.spawn([claudeBin(), ...claudeArgs(persona, prompt.system)], {
+    if (opts.signal?.aborted) throw new Error("interrupted");
+    const child = Bun.spawn([claudeBin(), ...claudeArgs(persona, prompt.system, opts.resume)], {
       cwd: project?.path ?? devitHome(),
       env,
       stdin: new TextEncoder().encode(prompt.user),
@@ -203,6 +225,12 @@ export async function executeRun(opts: ExecuteOptions): Promise<Run> {
       child.kill("SIGTERM");
       setTimeout(() => child.kill("SIGKILL"), 10_000).unref();
     }, persona.timeout_minutes * 60_000);
+    onAbort = () => {
+      interrupted = true;
+      child.kill("SIGTERM");
+      setTimeout(() => child.kill("SIGKILL"), 10_000).unref();
+    };
+    opts.signal?.addEventListener("abort", onAbort, { once: true });
 
     const stderr = new Response(child.stderr).text();
     const decoder = new TextDecoder();
@@ -229,17 +257,20 @@ export async function executeRun(opts: ExecuteOptions): Promise<Run> {
     exitCode = await child.exited;
     clearTimeout(timer);
     const errText = (await stderr).trim();
-    if (timedOut) error = `timed out after ${persona.timeout_minutes} min`;
+    if (interrupted) error = "interrupted";
+    else if (timedOut) error = `timed out after ${persona.timeout_minutes} min`;
     else if (exitCode !== 0) error = errText.split("\n").slice(-5).join("\n") || `agent exited with code ${exitCode}`;
     else if (result?.is_error) error = String(result.result ?? result.subtype ?? "agent reported an error");
   } catch (err) {
     error = (err as NodeJS.ErrnoException).code === "ENOENT" ? `runner not found: ${claudeBin()}` : (err as Error).message;
   } finally {
+    if (onAbort) opts.signal?.removeEventListener("abort", onAbort);
     await new Promise<void>((done) => log.end(done));
   }
 
   // Settle the run: the agent may already have reported done/silent.
   let final = getRun(db, run.id);
+  const output = typeof result?.result === "string" ? result.result.trim() || null : null;
   const usage = {
     cost_usd: typeof result?.total_cost_usd === "number" ? result.total_cost_usd : null,
     turns: typeof result?.num_turns === "number" ? result.num_turns : null,
@@ -249,8 +280,7 @@ export async function executeRun(opts: ExecuteOptions): Promise<Run> {
   if (error) {
     final = updateRun(db, run.id, { ...usage, status: "failed", error });
   } else if (final.status === "running") {
-    const text = typeof result?.result === "string" ? result.result.trim() : "";
-    final = updateRun(db, run.id, { ...usage, status: "done", summary: text.slice(0, 1000) || null });
+    final = updateRun(db, run.id, { ...usage, status: "done", summary: output?.slice(0, 1000) ?? null });
   } else {
     final = updateRun(db, run.id, usage);
   }
@@ -260,8 +290,10 @@ export async function executeRun(opts: ExecuteOptions): Promise<Run> {
     const current = getTask(db, task.id);
     if (current.status === "doing") {
       if (final.status === "failed") {
-        updateTask(db, task.id, { status: previousStatus });
-        addComment(db, task.id, "devit", `Run #${run.id} (${persona.name}) failed: ${final.error}`);
+        const back = opts.failStatus ?? previousStatus;
+        updateTask(db, task.id, { status: back });
+        const note = back === previousStatus ? "" : ` Moved to ${back}; move it to To do to retry.`;
+        addComment(db, task.id, "devit", `Run #${run.id} (${persona.name}) failed: ${final.error}.${note}`);
       } else if (final.status === "silent") {
         updateTask(db, task.id, { status: previousStatus });
       } else {
@@ -269,5 +301,5 @@ export async function executeRun(opts: ExecuteOptions): Promise<Run> {
       }
     }
   }
-  return final;
+  return { ...final, output };
 }

@@ -16,7 +16,7 @@ export interface Persona {
   runner: "claude";
   model: string | null;
   effort: (typeof EFFORTS)[number] | null;
-  /** Picks up tasks moved to `todo` and assigned to it (daemon, phase 3). */
+  /** Picks up tasks moved to `todo` and assigned to it while `devit serve` runs. */
   autopickup: boolean;
   allowed_tools: string[];
   disallowed_tools: string[];

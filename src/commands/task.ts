@@ -1,3 +1,4 @@
+import { localTime } from "../core/format.ts";
 import { DevitError } from "../core/errors.ts";
 import {
   addComment,
@@ -53,14 +54,14 @@ function showTask(ctx: Context, t: Task): string {
     `  status:   ${t.status}`,
     `  persona:  ${t.persona ?? "-"}`,
     `  priority: ${t.priority}`,
-    `  from:     ${t.created_by}${t.source !== "user" ? ` (${t.source})` : ""}, ${t.created_at.slice(0, 16).replace("T", " ")}`,
+    `  from:     ${t.created_by}${t.source !== "user" ? ` (${t.source})` : ""}, ${localTime(t.created_at)}`,
   ];
   if (t.issue_url) lines.push(`  issue:    ${t.issue_url}`);
   if (t.pr_url) lines.push(`  PR:       ${t.pr_url}`);
   if (t.body) lines.push("", t.body);
   if (comments.length) {
     lines.push("", "Comments:");
-    for (const c of comments) lines.push(`  [${c.created_at.slice(0, 16).replace("T", " ")}] ${c.author}: ${c.body}`);
+    for (const c of comments) lines.push(`  [${localTime(c.created_at)}] ${c.author}: ${c.body}`);
   }
   return lines.join("\n");
 }

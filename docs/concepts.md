@@ -37,10 +37,12 @@ allowed_tools: [Bash, Read, Edit, Write]
 You fix bugs and build features. Open a PR to the base branch; never merge.
 ```
 
-## Routine (phase 3)
+## Routine
 
-A persona + a playbook + a cron schedule, per project. A routine with nothing new to report ends with
-`devit run silent` and leaves no trace on the board.
+A persona plus a playbook and/or prompt on a cron schedule, in a project or across projects. `devit serve`
+runs it on time, and a run missed while the daemon was down happens once when it starts. A routine
+with nothing new to report ends with `devit run silent` and leaves no trace on the board. See
+[Routines, the daemon and the lead](daemon.md).
 
 ## Memory
 
