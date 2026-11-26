@@ -11,8 +11,8 @@ Devit has no LLM runtime of its own. The work runs in a headless coding agent
 ([Claude Code](https://docs.claude.com/en/docs/claude-code) today, Codex later), with the tools, MCP servers and
 skills it already has. Devit decides who runs, when, with which context, and keeps the result.
 
-> **Status: early (v0.1).** Projects and the task board work from the CLI. Personas, routines, memory,
-> the web board and the agent skill are next. See the [roadmap](docs/roadmap.md).
+> **Status: early (v0.2).** Projects, the task board, personas, memory and one-off runs work from the CLI.
+> Routines, `devit ask`, the web board and the agent skill are next. See the [roadmap](docs/roadmap.md).
 
 ## Install
 
@@ -38,6 +38,11 @@ devit task list                             # the board, by column
 devit task comment 1 "Happens only on Android 15"
 devit task move 1 review
 devit task show 1
+
+devit persona add dev --role "Developer" --model opus   # then edit ~/.devit/personas/dev.md
+devit run dev --task 1                      # the agent works; the task goes to review
+devit runs
+devit memory add deploy -d "Deploys go through a PR to main"
 ```
 
 Every command accepts `--json`, which is what agents use.
@@ -46,6 +51,8 @@ Every command accepts `--json`, which is what agents use.
 
 - [Getting started](docs/getting-started.md)
 - [Concepts](docs/concepts.md): projects, tasks, personas, routines, memory
+- [Personas](docs/personas.md)
+- [Runs and memory](docs/runs-and-memory.md)
 - [CLI reference](docs/cli.md)
 - [Roadmap](docs/roadmap.md)
 

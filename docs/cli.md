@@ -210,6 +210,263 @@ Global options:
   -h, --help            show help
 ```
 
+## devit persona list
+
+```
+List personas (global, plus the current project's overrides)
+
+Usage: devit persona list [options]
+
+Global options:
+  -p, --project <slug>  project to act on (default: the .devit/ above the current directory)
+      --json            print JSON instead of text
+  -h, --help            show help
+```
+
+## devit persona show
+
+```
+Show a persona's settings and instructions
+
+Usage: devit persona show <name> [options]
+
+Global options:
+  -p, --project <slug>  project to act on (default: the .devit/ above the current directory)
+      --json            print JSON instead of text
+  -h, --help            show help
+```
+
+## devit persona add
+
+```
+Create a persona file from a template
+
+Usage: devit persona add <name> [options]
+
+Writes ~/.devit/personas/<name>.md (or .devit/personas/ in the project with --local).
+Edit the file to set its tools, model and instructions; see docs/personas.md.
+
+Example:
+  devit persona add dev --role "Developer" --model opus
+
+Options:
+      --role <text>          one-line role, e.g. "Developer"
+      --model <model>        model alias or id (default: sonnet)
+      --lead                 make it the lead persona, which answers `devit ask`
+  -i, --instructions <text>  the persona's instructions (default: a placeholder)
+      --local                the current project's .devit/personas/ instead of the global folder
+
+Global options:
+  -p, --project <slug>  project to act on (default: the .devit/ above the current directory)
+      --json            print JSON instead of text
+  -h, --help            show help
+```
+
+## devit persona remove
+
+```
+Delete a persona file
+
+Usage: devit persona remove <name> [options]
+
+Options:
+      --local  the current project's .devit/personas/ instead of the global folder
+
+Global options:
+  -p, --project <slug>  project to act on (default: the .devit/ above the current directory)
+      --json            print JSON instead of text
+  -h, --help            show help
+```
+
+## devit run
+
+```
+Run a persona once, on a task, a playbook or a prompt
+
+Usage: devit run <persona> [options]
+
+Starts the persona's agent (Claude Code, headless) in the project folder and waits for it.
+The task, if any, moves to doing, then to review when the run ends (back where it was if it fails).
+
+Examples:
+  devit run dev --task 12
+  devit run pm --playbook weekly-report
+  devit run writer --prompt "Draft three post ideas from last week's search queries"
+  devit run dev --task 12 --dry-run      # print the prompt and command, run nothing
+
+Options:
+  -t, --task <id>        task to work on
+      --playbook <name>  playbook to follow (.devit/playbooks/<name>.md, then ~/.devit/playbooks/)
+      --prompt <text>    what to do, or extra instructions with --task/--playbook
+      --dry-run          print the prompt and the agent command instead of running
+  -q, --quiet            don't stream the agent's progress
+
+Global options:
+  -p, --project <slug>  project to act on (default: the .devit/ above the current directory)
+      --json            print JSON instead of text
+  -h, --help            show help
+```
+
+## devit run done
+
+```
+End the current run with a summary (for agents)
+
+Usage: devit run done [options]
+
+Options:
+  -s, --summary <text>  what was done, in one or two sentences
+
+Global options:
+  -p, --project <slug>  project to act on (default: the .devit/ above the current directory)
+      --json            print JSON instead of text
+  -h, --help            show help
+```
+
+## devit run silent
+
+```
+End the current run with nothing to report (for agents)
+
+Usage: devit run silent [options]
+
+Options:
+  -s, --summary <text>  optional note for the run log
+
+Global options:
+  -p, --project <slug>  project to act on (default: the .devit/ above the current directory)
+      --json            print JSON instead of text
+  -h, --help            show help
+```
+
+## devit runs
+
+```
+List recent runs
+
+Usage: devit runs [options]
+
+Options:
+      --persona <name>   only this persona
+      --failed           only failed runs
+  -s, --status <status>  running, done, silent or failed
+  -n, --limit <n>        how many (default 20)
+  -a, --all              every project, not just the current one
+
+Global options:
+  -p, --project <slug>  project to act on (default: the .devit/ above the current directory)
+      --json            print JSON instead of text
+  -h, --help            show help
+```
+
+## devit runs show
+
+```
+Show a run, optionally with its log
+
+Usage: devit runs show <id> [options]
+
+Options:
+  -l, --log  print the agent's raw event log (JSON lines)
+
+Global options:
+  -p, --project <slug>  project to act on (default: the .devit/ above the current directory)
+      --json            print JSON instead of text
+  -h, --help            show help
+```
+
+## devit memory add
+
+```
+Save a fact (same name replaces it)
+
+Usage: devit memory add <name> [options]
+
+Scope defaults to the current project, or global outside one.
+
+Example:
+  devit memory add release-process --description "How releases ship" --body "PR develop → main, merge commit"
+
+Options:
+  -d, --description <text>  one line: what this is and when it matters (required)
+  -b, --body <text>         the full fact (default: the description)
+  -s, --scope <scope>       global, project or persona
+      --persona <name>      persona for the persona scope (default: the running persona)
+
+Global options:
+  -p, --project <slug>  project to act on (default: the .devit/ above the current directory)
+      --json            print JSON instead of text
+  -h, --help            show help
+```
+
+## devit memory list
+
+```
+List what is remembered (global, project and persona scopes)
+
+Usage: devit memory list [options]
+
+Options:
+  -s, --scope <scope>   global, project or persona
+      --persona <name>  persona for the persona scope (default: the running persona)
+
+Global options:
+  -p, --project <slug>  project to act on (default: the .devit/ above the current directory)
+      --json            print JSON instead of text
+  -h, --help            show help
+```
+
+## devit memory show
+
+```
+Show a memory entry (looks in persona, then project, then global)
+
+Usage: devit memory show <name> [options]
+
+Options:
+  -s, --scope <scope>   global, project or persona
+      --persona <name>  persona for the persona scope (default: the running persona)
+
+Global options:
+  -p, --project <slug>  project to act on (default: the .devit/ above the current directory)
+      --json            print JSON instead of text
+  -h, --help            show help
+```
+
+## devit memory search
+
+```
+Search names, descriptions and text
+
+Usage: devit memory search <term> [options]
+
+Options:
+  -s, --scope <scope>   global, project or persona
+      --persona <name>  persona for the persona scope (default: the running persona)
+
+Global options:
+  -p, --project <slug>  project to act on (default: the .devit/ above the current directory)
+      --json            print JSON instead of text
+  -h, --help            show help
+```
+
+## devit memory remove
+
+```
+Delete a memory entry
+
+Usage: devit memory remove <name> [options]
+
+Options:
+  -s, --scope <scope>   global, project or persona
+      --persona <name>  persona for the persona scope (default: the running persona)
+
+Global options:
+  -p, --project <slug>  project to act on (default: the .devit/ above the current directory)
+      --json            print JSON instead of text
+  -h, --help            show help
+```
+
 ## devit doctor
 
 ```

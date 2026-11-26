@@ -47,6 +47,28 @@ const MIGRATIONS: string[] = [
   );
   CREATE INDEX comments_task ON comments (task_id);
   `,
+  `
+  CREATE TABLE runs (
+    id          INTEGER PRIMARY KEY,
+    persona     TEXT NOT NULL,
+    project_id  INTEGER REFERENCES projects(id) ON DELETE CASCADE,
+    task_id     INTEGER REFERENCES tasks(id) ON DELETE SET NULL,
+    playbook    TEXT,
+    trigger     TEXT NOT NULL DEFAULT 'manual',
+    status      TEXT NOT NULL DEFAULT 'running'
+                CHECK (status IN ('running', 'done', 'silent', 'failed')),
+    summary     TEXT,
+    error       TEXT,
+    cost_usd    REAL,
+    turns       INTEGER,
+    session_id  TEXT,
+    pid         INTEGER,
+    started_at  TEXT NOT NULL,
+    finished_at TEXT
+  );
+  CREATE INDEX runs_persona ON runs (persona, started_at);
+  CREATE INDEX runs_status ON runs (status);
+  `,
 ];
 
 export const SCHEMA_VERSION = MIGRATIONS.length;

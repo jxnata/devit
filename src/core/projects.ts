@@ -193,6 +193,12 @@ export function resolveProject(db: Database, slug?: string, cwd: string = proces
   if (!root) return null;
   const existing = getProjectByPath(db, resolve(root));
   const config = readProjectConfig(root);
-  if (existing && existing.slug === config.slug) return existing;
+  const same =
+    existing &&
+    existing.slug === config.slug &&
+    existing.name === config.name &&
+    existing.repo === config.repo &&
+    existing.base_branch === config.base_branch;
+  if (same) return existing;
   return upsertProject(db, root, config);
 }

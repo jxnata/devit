@@ -1,5 +1,5 @@
 # Devit project config. Commit it so everyone working on this repo shares it.
 slug: devit
 name: "devit"
-repo: null
+repo: jxnata/devit
 base_branch: main

@@ -83,7 +83,11 @@ export async function runCommand(command: Command, argv: string[]): Promise<void
   const getDb = () => (db ??= openDb());
   let project: Project | null | undefined;
   const maybeProject = () => {
-    if (project === undefined) project = resolveProject(getDb(), values.project as string | undefined);
+    if (project === undefined) {
+      // Inside a run the agent's project comes from the environment, wherever it cds to.
+      const slug = (values.project as string | undefined) ?? (process.env.DEVIT_PROJECT || undefined);
+      project = resolveProject(getDb(), slug);
+    }
     return project;
   };
   const json = Boolean(values.json);

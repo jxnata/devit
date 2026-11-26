@@ -8,8 +8,8 @@ name it in commands (`-p my-app`).
 ```
 <repo>/.devit/
   project.yaml        slug, name, repo, base branch
-  playbooks/          step-by-step instructions for routines (phase 2)
-  personas/           per-project persona overrides (phase 2, optional)
+  playbooks/          step-by-step instructions for recurring jobs
+  personas/           per-project persona overrides (optional)
 ```
 
 ## Task
@@ -20,17 +20,17 @@ or PR. Moving a task to `todo` with a persona assigned is how you tell that pers
 Comments are how you and the personas talk about a task. When an agent runs a `devit` command, it carries
 `DEVIT_PERSONA` in its environment, so comments and tasks it creates are attributed to it.
 
-## Persona (phase 2)
+## Persona
 
 A markdown file with frontmatter: who the agent is, which model it uses, which tools and MCP servers it
-may use, how many turns it gets. One persona has `lead: true` and answers `devit ask`.
+may use, its time and cost limits. See [Personas](personas.md). One persona has `lead: true` and answers `devit ask`.
 
 ```markdown
 ---
 name: dev
 role: Developer
 model: opus
-max_turns: 60
+timeout_minutes: 45
 autopickup: true
 allowed_tools: [Bash, Read, Edit, Write]
 ---
@@ -42,14 +42,16 @@ You fix bugs and build features. Open a PR to the base branch; never merge.
 A persona + a playbook + a cron schedule, per project. A routine with nothing new to report ends with
 `devit run silent` and leaves no trace on the board.
 
-## Memory (phase 2)
+## Memory
 
 Markdown files, one fact each, in three scopes: global, project and persona. Each scope has a
 `MEMORY.md` index that goes into every run's prompt; the agent reads the rest on demand.
+See [Runs and memory](runs-and-memory.md).
 
-## Run (phase 2)
+## Run
 
-One execution of a persona: what triggered it, the status, the cost and the full log.
+One execution of a persona: what triggered it, the status (`running`, `done`, `silent`, `failed`),
+the cost and the full log.
 
 ## Principles
 

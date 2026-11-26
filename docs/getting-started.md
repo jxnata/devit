@@ -50,9 +50,27 @@ devit task show 1
 Columns: `backlog` → `todo` → `doing` → `review` → `done`.
 
 - **backlog**: ideas, and tasks routines create, not yet approved.
-- **todo**: approved. A persona with autopickup starts it (coming in phase 3).
+- **todo**: approved. A persona with autopickup starts it (with `devit serve`, coming in phase 3).
 - **doing**: in progress.
 - **review**: waiting for you: a PR to merge, a post to approve, a question.
 - **done**.
 
 Outside a project folder, pass `-p <slug>`. `devit task list --all` outside a project lists every project.
+
+## 4. Add a persona and run it
+
+```sh
+devit persona add dev --role "Developer" --model sonnet
+```
+
+Open `~/.devit/personas/dev.md`, write its instructions and allow the tools it needs (it can only read
+files until you do). Then:
+
+```sh
+devit task add "Fix the typo in the README" --persona dev --status todo
+devit run dev --task 1 --dry-run   # see exactly what the agent gets
+devit run dev --task 1
+devit task show 1                  # its comment, now in review
+```
+
+See [Personas](personas.md) and [Runs and memory](runs-and-memory.md).
