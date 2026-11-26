@@ -92,6 +92,7 @@ export function updateRun(db: Database, id: number, patch: RunPatch): Run {
 
 export interface RunFilter {
   persona?: string;
+  taskId?: number;
   routineId?: number;
   projectId?: number;
   statuses?: RunStatus[];
@@ -104,6 +105,10 @@ export function listRuns(db: Database, filter: RunFilter = {}): Run[] {
   if (filter.persona) {
     where.push("r.persona = $persona");
     params.persona = filter.persona;
+  }
+  if (filter.taskId !== undefined) {
+    where.push("r.task_id = $task_id");
+    params.task_id = filter.taskId;
   }
   if (filter.routineId !== undefined) {
     where.push("r.routine_id = $routine_id");

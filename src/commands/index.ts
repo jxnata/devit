@@ -1,6 +1,7 @@
 import type { Command } from "../framework.ts";
 import { askCommand } from "./ask.ts";
 import { doctorCommand } from "./doctor.ts";
+import { githubCommands } from "./github.ts";
 import { memoryCommands } from "./memory.ts";
 import { personaCommands } from "./persona.ts";
 import { projectCommands } from "./project.ts";
@@ -17,6 +18,7 @@ export const commands: Command[] = [
   askCommand,
   ...routineCommands,
   serveCommand,
+  ...githubCommands,
   ...memoryCommands,
   doctorCommand,
 ];

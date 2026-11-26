@@ -518,7 +518,7 @@ Global options:
 ## devit serve
 
 ```
-Run the daemon: routines on schedule and autopickup of tasks
+Run the daemon and the web board: routines, autopickup, GitHub sync
 
 Usage: devit serve [options]
 
@@ -528,13 +528,44 @@ Every --interval seconds it starts:
   - tasks in To do assigned to a persona with `autopickup: true` (a failure sends them to the backlog)
 A persona runs one thing at a time. Only one daemon runs per DEVIT_HOME.
 
---once does a single pass and waits for its runs, for system cron or CI.
-See docs/daemon.md to keep it running with systemd.
+The board is at http://127.0.0.1:7420. To reach it from elsewhere, put it behind a tunnel
+(Cloudflare Tunnel + Access, Tailscale, ssh -L) and allow that hostname with --allowed-host, or
+serve it with --host 0.0.0.0 --token <secret>. See docs/board.md.
+
+Every --sync-minutes it runs `devit github sync` for projects with a repo, if `gh` is logged in.
+--once does a single pass and waits for its runs, without the board, for system cron or CI.
 
 Options:
-      --once                one pass: start what is due, wait for it, exit
-      --interval <seconds>  how often to look for work (default 30)
-      --max-parallel <n>    runs at the same time (default 3)
+      --once                 one pass: start what is due, wait for it, exit
+      --interval <seconds>   how often to look for work (default 30)
+      --max-parallel <n>     runs at the same time (default 3)
+      --port <port>          board port (default 7420, or DEVIT_PORT)
+      --host <host>          board address (default 127.0.0.1)
+      --token <secret>       require this token on the board (or DEVIT_TOKEN)
+      --allowed-host <name>  hostname a tunnel serves the board on (repeatable)
+      --no-web               no board, just the daemon
+      --sync-minutes <n>     GitHub sync interval (default 15; 0 turns it off)
+
+Global options:
+  -p, --project <slug>  project to act on (default: the .devit/ above the current directory)
+      --json            print JSON instead of text
+  -h, --help            show help
+```
+
+## devit github sync
+
+```
+Import labeled GitHub issues and close tasks whose PR merged
+
+Usage: devit github sync [options]
+
+Uses the GitHub CLI (`gh`), logged in with `gh auth login`. For the project's repo:
+  - open issues labeled `devit` (or `issue_label` in .devit/project.yaml) become backlog tasks
+  - a task whose PR was merged, or whose issue was closed, moves to done
+Devit only reads from GitHub. `devit serve` runs this every 15 minutes.
+
+Options:
+  -a, --all  every project with a repo
 
 Global options:
   -p, --project <slug>  project to act on (default: the .devit/ above the current directory)

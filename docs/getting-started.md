@@ -86,3 +86,8 @@ devit serve        # leave it running (see docs/daemon.md for systemd)
 
 Set `autopickup: true` in a persona's file. From then on, moving a task assigned to it into To do is
 enough to get it worked on while `devit serve` runs. See [Routines, the daemon and the lead](daemon.md).
+
+## 6. The board
+
+While `devit serve` runs, open http://127.0.0.1:7420. On a server, reach it through an SSH tunnel or
+Cloudflare Tunnel + Access. See [The web board and GitHub sync](board.md).

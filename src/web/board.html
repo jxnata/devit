@@ -1,0 +1,421 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Devit</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%232f6fde'/%3E%3Cpath d='M9 8h7a8 8 0 010 16H9z' fill='none' stroke='white' stroke-width='3'/%3E%3C/svg%3E">
+<style>
+:root {
+  --bg: #f6f6f4; --panel: #ffffff; --col: #ecece8; --line: #dcdcd6; --text: #1c1c1a; --muted: #6b6b66;
+  --accent: #2f6fde; --accent-soft: #e3ecfc; --high: #c2410c; --low: #8a8a84; --ok: #15803d; --bad: #b91c1c;
+  --run: #d97706; --shadow: 0 1px 2px rgba(0,0,0,.06), 0 1px 1px rgba(0,0,0,.04);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #151513; --panel: #1f1f1c; --col: #1a1a18; --line: #2f2f2b; --text: #ecece8; --muted: #9a9a93;
+    --accent: #6b9cf0; --accent-soft: #1f2c44; --high: #fb923c; --low: #77776f; --ok: #4ade80; --bad: #f87171;
+    --run: #fbbf24; --shadow: none; color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { background: var(--bg); color: var(--text); font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; display: flex; flex-direction: column; }
+button, input, select, textarea { font: inherit; color: inherit; }
+a { color: var(--accent); }
+header { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-bottom: 1px solid var(--line); background: var(--panel); flex-wrap: wrap; }
+.logo { font-weight: 700; letter-spacing: -.01em; display: flex; align-items: center; gap: 8px; }
+.logo i { width: 18px; height: 18px; border-radius: 5px; background: var(--accent); display: inline-block; }
+select.project { padding: 5px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); max-width: 220px; }
+nav { display: flex; gap: 2px; }
+nav a { padding: 5px 10px; border-radius: 6px; color: var(--muted); text-decoration: none; }
+nav a.on { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.spacer { flex: 1; }
+.btn { padding: 6px 12px; border-radius: 6px; border: 1px solid var(--line); background: var(--panel); cursor: pointer; }
+.btn:hover { border-color: var(--muted); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn.danger { color: var(--bad); }
+.btn:disabled { opacity: .5; cursor: default; }
+main { flex: 1; min-height: 0; overflow: auto; }
+.board { display: grid; grid-template-columns: repeat(5, minmax(240px, 1fr)); gap: 12px; padding: 16px; min-height: 100%; align-items: start; }
+@media (max-width: 900px) { .board { grid-template-columns: repeat(5, 80vw); overflow-x: auto; scroll-snap-type: x mandatory; } .column { scroll-snap-align: start; } }
+.column { background: var(--col); border-radius: 10px; padding: 8px; min-height: 120px; }
+.column.over { outline: 2px dashed var(--accent); outline-offset: -2px; }
+.column h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin: 4px 6px 8px; display: flex; justify-content: space-between; align-items: center; }
+.column h2 button { border: 0; background: none; color: var(--muted); cursor: pointer; font-size: 18px; line-height: 1; padding: 0 4px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; margin-bottom: 8px; cursor: pointer; box-shadow: var(--shadow); }
+.card:hover { border-color: var(--muted); }
+.card.dragging { opacity: .4; }
+.card .title { font-weight: 500; word-break: break-word; }
+.card .meta { display: flex; gap: 6px; align-items: center; margin-top: 6px; color: var(--muted); font-size: 12px; flex-wrap: wrap; }
+.chip { padding: 1px 7px; border-radius: 99px; background: var(--accent-soft); color: var(--accent); font-size: 12px; }
+.prio-high { color: var(--high); font-weight: 600; }
+.prio-low { color: var(--low); }
+.live { display: inline-flex; align-items: center; gap: 4px; color: var(--run); font-weight: 600; }
+.live::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--run); animation: pulse 1.2s infinite; }
+@keyframes pulse { 50% { opacity: .3; } }
+.newtask { background: var(--panel); border: 1px solid var(--accent); border-radius: 8px; padding: 8px; margin-bottom: 8px; }
+.newtask input, .newtask textarea { width: 100%; border: 0; outline: 0; background: transparent; resize: vertical; }
+.newtask .row { display: flex; gap: 6px; margin-top: 6px; justify-content: flex-end; }
+.drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(560px, 100vw); background: var(--panel); border-left: 1px solid var(--line); box-shadow: -8px 0 24px rgba(0,0,0,.12); display: flex; flex-direction: column; z-index: 10; }
+.drawer[hidden] { display: none; }
+.drawer .head { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+.drawer .head h3 { margin: 0; font-size: 15px; flex: 1; }
+.drawer .body { flex: 1; overflow: auto; padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+.close { border: 0; background: none; font-size: 22px; cursor: pointer; color: var(--muted); line-height: 1; }
+.field label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+.field input, .field textarea, .field select { width: 100%; padding: 7px 9px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); }
+.field textarea { min-height: 90px; resize: vertical; }
+.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+@media (max-width: 480px) { .grid3 { grid-template-columns: 1fr; } }
+.comments { display: flex; flex-direction: column; gap: 8px; }
+.comment { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
+.comment .who { font-size: 12px; color: var(--muted); margin-bottom: 2px; }
+.comment .who b { color: var(--text); }
+.pre { white-space: pre-wrap; word-break: break-word; }
+.links { display: flex; gap: 12px; font-size: 13px; flex-wrap: wrap; }
+h4 { margin: 0 0 6px; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+table { border-collapse: collapse; width: 100%; }
+.tablewrap { padding: 16px; overflow-x: auto; }
+th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: 12px; color: var(--muted); font-weight: 600; white-space: nowrap; }
+td:nth-child(-n+2) { white-space: nowrap; }
+tr.click { cursor: pointer; }
+tr.click:hover td { background: var(--col); }
+.st-done { color: var(--ok); } .st-failed { color: var(--bad); } .st-silent { color: var(--muted); } .st-running { color: var(--run); font-weight: 600; }
+.events { font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 10px; white-space: pre-wrap; word-break: break-word; max-height: 50vh; overflow: auto; }
+.muted { color: var(--muted); }
+.empty { padding: 40px 16px; text-align: center; color: var(--muted); }
+.msg { border-radius: 10px; padding: 8px 12px; max-width: 92%; }
+.msg.me { align-self: flex-end; background: var(--accent); color: #fff; }
+.msg.lead { align-self: flex-start; background: var(--col); }
+.msg .steps { font: 12px/1.5 ui-monospace, monospace; color: var(--muted); margin-top: 6px; }
+.askbox { border-top: 1px solid var(--line); padding: 12px 16px; display: flex; flex-direction: column; gap: 8px; }
+.askbox textarea { width: 100%; min-height: 60px; padding: 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); resize: vertical; }
+.askbox .row { display: flex; gap: 8px; align-items: center; justify-content: space-between; }
+.toast { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); background: var(--text); color: var(--bg); padding: 8px 14px; border-radius: 8px; z-index: 20; max-width: calc(100vw - 32px); }
+</style>
+</head>
+<body>
+<header>
+  <span class="logo"><i></i>Devit</span>
+  <select class="project" id="project" aria-label="Project"></select>
+  <nav id="nav"></nav>
+  <span class="spacer"></span>
+  <button class="btn" id="askBtn">Ask the lead</button>
+</header>
+<main id="main"><div class="empty">Loading…</div></main>
+
+<aside class="drawer" id="drawer" hidden>
+  <div class="head"><h3 id="drawerTitle"></h3><button class="close" id="drawerClose" aria-label="Close">×</button></div>
+  <div class="body" id="drawerBody"></div>
+  <div id="drawerFoot"></div>
+</aside>
+
+<script>
+const STATUSES = [["backlog", "Backlog"], ["todo", "To do"], ["doing", "Doing"], ["review", "Review"], ["done", "Done"]];
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+const linkify = (s) => esc(s).replace(/https?:\/\/[^\s<]+/g, (u) => `<a href="${u}" target="_blank" rel="noopener">${u}</a>`);
+const when = (iso) => { if (!iso) return "-"; const d = new Date(iso); return d.toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }); };
+const usd = (n) => n == null ? "-" : n > 0 && n < 0.01 ? "<$0.01" : `$${n.toFixed(2)}`;
+const dur = (r) => { if (!r.finished_at) return "running"; const s = Math.round((Date.parse(r.finished_at) - Date.parse(r.started_at)) / 1000); return s < 60 ? `${s}s` : `${Math.floor(s / 60)}m${String(s % 60).padStart(2, "0")}s`; };
+
+const state = { projects: [], slug: null, view: "board", board: null, boardKey: "", dragging: null, openTask: null, newIn: null, chat: [] };
+
+function toast(text) {
+  const el = document.createElement("div"); el.className = "toast"; el.textContent = text;
+  document.body.append(el); setTimeout(() => el.remove(), 3500);
+}
+
+async function api(path, opts = {}) {
+  const res = await fetch(`/api/${path}`, { ...opts, headers: opts.body ? { "content-type": "application/json" } : {}, body: opts.body ? JSON.stringify(opts.body) : undefined });
+  if (res.status === 401) { location.reload(); throw new Error("unauthorized"); }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+  return data;
+}
+
+// ---------- routing: #/<project>/<view>[/<task id>] ----------
+function parseHash() {
+  const [slug, view, id] = location.hash.replace(/^#\/?/, "").split("/");
+  return { slug: slug || null, view: view || "board", id: id ? Number(id) : null };
+}
+function go(slug, view = "board", id = null) { location.hash = `/${slug}/${view}${id ? `/${id}` : ""}`; }
+
+async function route() {
+  const h = parseHash();
+  if (!h.slug || !state.projects.some((p) => p.slug === h.slug)) {
+    const first = state.projects[0];
+    if (first) return go(localStorage.getItem("devit.project") && state.projects.some((p) => p.slug === localStorage.getItem("devit.project")) ? localStorage.getItem("devit.project") : first.slug);
+    $("#main").innerHTML = `<div class="empty">No projects yet. Run <code>devit init</code> in a repo.</div>`;
+    return;
+  }
+  const changed = h.slug !== state.slug || h.view !== state.view;
+  state.slug = h.slug; state.view = h.view;
+  try { localStorage.setItem("devit.project", h.slug); } catch {}
+  $("#project").value = h.slug;
+  $("#nav").innerHTML = [["board", "Board"], ["runs", "Runs"], ["routines", "Routines"]]
+    .map(([v, l]) => `<a href="#/${esc(h.slug)}/${v}" class="${v === h.view ? "on" : ""}">${l}</a>`).join("");
+  if (changed) { state.boardKey = ""; $("#main").innerHTML = `<div class="empty">Loading…</div>`; }
+  await refresh();
+  if (h.view === "board" && h.id) openTask(h.id);
+  else if (h.view === "runs" && h.id) openRun(h.id);
+  else if (state.openTask || $("#drawer").dataset.kind === "run") closeDrawer(false);
+}
+
+async function refresh() {
+  try {
+    if (state.view === "board") await loadBoard();
+    else if (state.view === "runs") await loadRuns();
+    else if (state.view === "routines") await loadRoutines();
+  } catch (err) { if (err.message !== "unauthorized") toast(err.message); }
+}
+
+// ---------- board ----------
+async function loadBoard() {
+  const board = await api(`board?project=${encodeURIComponent(state.slug)}`);
+  const key = JSON.stringify(board);
+  if (key === state.boardKey || state.dragging || state.newIn) return;
+  state.board = board; state.boardKey = key;
+  renderBoard();
+}
+
+function renderBoard() {
+  const { tasks, running } = state.board;
+  const live = new Map(running.filter((r) => r.task_id).map((r) => [r.task_id, r]));
+  $("#main").innerHTML = `<div class="board">${STATUSES.map(([s, label]) => {
+    const list = tasks.filter((t) => t.status === s);
+    return `<section class="column" data-status="${s}">
+      <h2><span>${label} · ${list.length}</span>${s === "backlog" || s === "todo" ? `<button data-new="${s}" title="New task">+</button>` : ""}</h2>
+      ${state.newIn === s ? newTaskForm() : ""}
+      ${list.map((t) => card(t, live.get(t.id))).join("") || ""}
+    </section>`;
+  }).join("")}</div>`;
+  bindBoard();
+}
+
+function card(t, run) {
+  const prio = t.priority === "high" ? `<span class="prio-high">↑ high</span>` : t.priority === "low" ? `<span class="prio-low">↓ low</span>` : "";
+  return `<article class="card" draggable="true" data-id="${t.id}">
+    <div class="title">${esc(t.title)}</div>
+    <div class="meta"><span>#${t.id}</span>${t.persona ? `<span class="chip">${esc(t.persona)}</span>` : ""}${prio}
+      ${run ? `<span class="live">${esc(run.persona)} working</span>` : ""}
+      ${t.pr_url ? `<span title="Has a PR">PR</span>` : ""}${t.issue_url ? `<span title="From a GitHub issue">issue</span>` : ""}</div>
+  </article>`;
+}
+
+function newTaskForm() {
+  const personas = state.board.personas;
+  return `<form class="newtask" id="newTask">
+    <input name="title" placeholder="Task title" required autocomplete="off">
+    <textarea name="body" rows="2" placeholder="Details (optional)"></textarea>
+    <div class="row">
+      <select name="persona"><option value="">No persona</option>${personas.map((p) => `<option>${esc(p.name)}</option>`).join("")}</select>
+      <button type="button" class="btn" id="cancelNew">Cancel</button><button class="btn primary">Add</button>
+    </div></form>`;
+}
+
+function bindBoard() {
+  for (const el of document.querySelectorAll(".card")) {
+    el.addEventListener("click", () => go(state.slug, "board", el.dataset.id));
+    el.addEventListener("dragstart", (e) => { state.dragging = el.dataset.id; el.classList.add("dragging"); e.dataTransfer.setData("text/plain", el.dataset.id); });
+    el.addEventListener("dragend", () => { state.dragging = null; el.classList.remove("dragging"); });
+  }
+  for (const col of document.querySelectorAll(".column")) {
+    col.addEventListener("dragover", (e) => { e.preventDefault(); col.classList.add("over"); });
+    col.addEventListener("dragleave", () => col.classList.remove("over"));
+    col.addEventListener("drop", async (e) => {
+      e.preventDefault(); col.classList.remove("over");
+      const id = e.dataTransfer.getData("text/plain"); state.dragging = null;
+      const task = state.board.tasks.find((t) => String(t.id) === id);
+      if (!task || task.status === col.dataset.status) return;
+      task.status = col.dataset.status; renderBoard();
+      try {
+        await api(`tasks/${id}`, { method: "PATCH", body: { status: col.dataset.status } });
+        if (col.dataset.status === "todo" && task.persona) toast(`#${id} is in To do for ${task.persona}`);
+      } catch (err) { toast(err.message); }
+      state.boardKey = ""; loadBoard();
+    });
+  }
+  for (const b of document.querySelectorAll("[data-new]")) b.addEventListener("click", () => { state.newIn = b.dataset.new; renderBoard(); $("#newTask input").focus(); });
+  const form = $("#newTask");
+  if (form) {
+    $("#cancelNew").addEventListener("click", () => { state.newIn = null; renderBoard(); });
+    form.addEventListener("keydown", (e) => { if (e.key === "Escape") { state.newIn = null; renderBoard(); } });
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const f = new FormData(form);
+      try {
+        await api("tasks", { method: "POST", body: { project: state.slug, title: f.get("title"), body: f.get("body"), persona: f.get("persona") || null, status: state.newIn } });
+        state.newIn = null; state.boardKey = ""; await loadBoard();
+      } catch (err) { toast(err.message); }
+    });
+  }
+}
+
+// ---------- drawer ----------
+function showDrawer(kind, title, html, foot = "") {
+  const d = $("#drawer"); d.hidden = false; d.dataset.kind = kind;
+  $("#drawerTitle").innerHTML = title; $("#drawerBody").innerHTML = html; $("#drawerFoot").innerHTML = foot;
+}
+function closeDrawer(nav = true) {
+  const kind = $("#drawer").dataset.kind;
+  $("#drawer").hidden = true; $("#drawer").dataset.kind = ""; state.openTask = null;
+  if (nav && (kind === "task" || kind === "run")) go(state.slug, state.view);
+}
+$("#drawerClose").addEventListener("click", () => closeDrawer());
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("#drawer").hidden && !e.target.closest("form.newtask")) closeDrawer(); });
+
+async function openTask(id) {
+  let t;
+  try { t = await api(`tasks/${id}`); } catch (err) { toast(err.message); return go(state.slug); }
+  state.openTask = id;
+  const personas = state.board?.personas ?? [];
+  const opt = (v, l, cur) => `<option value="${esc(v)}" ${v === cur ? "selected" : ""}>${esc(l)}</option>`;
+  showDrawer("task", `#${t.id} <span class="muted">· ${esc(t.project)}</span>`, `
+    <form id="taskForm" class="field" style="display:flex;flex-direction:column;gap:10px">
+      <div class="field"><label>Title</label><input name="title" value="${esc(t.title)}" required></div>
+      <div class="grid3">
+        <div class="field"><label>Column</label><select name="status">${STATUSES.map(([v, l]) => opt(v, l, t.status)).join("")}</select></div>
+        <div class="field"><label>Persona</label><select name="persona">${opt("", "None", t.persona ?? "")}${personas.map((p) => opt(p.name, p.name + (p.autopickup ? " (auto)" : ""), t.persona)).join("")}${t.persona && !personas.some((p) => p.name === t.persona) ? opt(t.persona, t.persona, t.persona) : ""}</select></div>
+        <div class="field"><label>Priority</label><select name="priority">${["high", "normal", "low"].map((p) => opt(p, p, t.priority)).join("")}</select></div>
+      </div>
+      <div class="field"><label>Description</label><textarea name="body">${esc(t.body)}</textarea></div>
+      <div class="row" style="display:flex;gap:8px;justify-content:space-between">
+        <button type="button" class="btn danger" id="delTask">Delete</button><button class="btn primary">Save</button>
+      </div>
+    </form>
+    ${t.issue_url || t.pr_url ? `<div class="links">${t.issue_url ? `<a href="${esc(t.issue_url)}" target="_blank" rel="noopener">Issue ↗</a>` : ""}${t.pr_url ? `<a href="${esc(t.pr_url)}" target="_blank" rel="noopener">Pull request ↗</a>` : ""}</div>` : ""}
+    <div class="muted" style="font-size:12px">Created by ${esc(t.created_by)}${t.source !== "user" ? ` (${esc(t.source)})` : ""}, ${when(t.created_at)}</div>
+    ${t.runs.length ? `<div><h4>Runs</h4><table>${t.runs.map((r) => `<tr class="click" data-run="${r.id}"><td>#${r.id}</td><td>${esc(r.persona)}</td><td class="st-${r.status}">${r.status}</td><td>${when(r.started_at)}</td><td>${usd(r.cost_usd)}</td></tr>`).join("")}</table></div>` : ""}
+    <div><h4>Comments</h4><div class="comments">${t.comments.map((c) => `<div class="comment"><div class="who"><b>${esc(c.author)}</b> · ${when(c.created_at)}</div><div class="pre">${linkify(c.body)}</div></div>`).join("") || `<span class="muted">No comments yet.</span>`}</div></div>
+    <form id="commentForm" class="field" style="display:flex;flex-direction:column;gap:6px">
+      <textarea name="body" placeholder="Write a comment (Ctrl+Enter)" required style="min-height:60px"></textarea>
+      <div style="text-align:right"><button class="btn">Comment</button></div>
+    </form>`);
+  $("#taskForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const f = new FormData(e.target);
+    try {
+      await api(`tasks/${id}`, { method: "PATCH", body: { title: f.get("title"), body: f.get("body"), status: f.get("status"), persona: f.get("persona") || null, priority: f.get("priority") } });
+      toast("Saved"); state.boardKey = ""; await loadBoard(); openTask(id);
+    } catch (err) { toast(err.message); }
+  });
+  $("#delTask").addEventListener("click", async () => {
+    if (!confirm(`Delete task #${id}? This cannot be undone.`)) return;
+    try { await api(`tasks/${id}`, { method: "DELETE" }); closeDrawer(); state.boardKey = ""; loadBoard(); } catch (err) { toast(err.message); }
+  });
+  const cf = $("#commentForm");
+  cf.querySelector("textarea").addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) cf.requestSubmit(); });
+  cf.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    try { await api(`tasks/${id}/comments`, { method: "POST", body: { body: new FormData(cf).get("body") } }); openTask(id); } catch (err) { toast(err.message); }
+  });
+  for (const r of document.querySelectorAll("[data-run]")) r.addEventListener("click", () => go(state.slug, "runs", r.dataset.run));
+}
+
+// ---------- runs ----------
+async function loadRuns() {
+  const runs = await api(`runs?project=${encodeURIComponent(state.slug)}&limit=100`);
+  const key = JSON.stringify(runs);
+  if (key === state.boardKey) return; state.boardKey = key;
+  const whatOf = (r) => r.task_id ? `task #${r.task_id}` : r.playbook ? `playbook ${esc(r.playbook)}` : r.trigger;
+  $("#main").innerHTML = runs.length ? `<div class="tablewrap"><table>
+    <tr><th>Run</th><th>Started</th><th>Persona</th><th>What</th><th>Status</th><th>Time</th><th>Cost</th><th>Summary</th></tr>
+    ${runs.map((r) => `<tr class="click" data-run="${r.id}"><td>#${r.id}</td><td>${when(r.started_at)}</td><td>${esc(r.persona)}</td><td>${whatOf(r)}</td>
+      <td class="st-${r.status}">${r.status}</td><td>${dur(r)}</td><td>${usd(r.cost_usd)}</td><td>${esc((r.summary ?? r.error ?? "").split("\n")[0].slice(0, 120))}</td></tr>`).join("")}
+  </table></div>` : `<div class="empty">No runs in this project yet.</div>`;
+  for (const r of document.querySelectorAll("[data-run]")) r.addEventListener("click", () => go(state.slug, "runs", r.dataset.run));
+}
+
+async function openRun(id) {
+  let r;
+  try { r = await api(`runs/${id}`); } catch (err) { toast(err.message); return; }
+  showDrawer("run", `Run #${r.id} <span class="muted">· ${esc(r.persona)}</span>`, `
+    <table>
+      <tr><th>Status</th><td class="st-${r.status}">${r.status}</td></tr>
+      <tr><th>Trigger</th><td>${esc(r.trigger)}${r.task_id ? ` · <a href="#/${esc(state.slug)}/board/${r.task_id}">task #${r.task_id}</a>` : ""}${r.playbook ? ` · playbook ${esc(r.playbook)}` : ""}</td></tr>
+      <tr><th>Started</th><td>${when(r.started_at)} · ${dur(r)}</td></tr>
+      <tr><th>Cost</th><td>${usd(r.cost_usd)}${r.turns ? ` · ${r.turns} turns` : ""}</td></tr>
+    </table>
+    ${r.summary ? `<div><h4>Summary</h4><div class="pre">${linkify(r.summary)}</div></div>` : ""}
+    ${r.error ? `<div><h4>Error</h4><div class="pre st-failed">${esc(r.error)}</div></div>` : ""}
+    ${r.output && r.output !== r.summary ? `<div><h4>Final message</h4><div class="pre">${linkify(r.output)}</div></div>` : ""}
+    <div><h4>Activity</h4><div class="events">${r.events.length ? r.events.map(esc).join("\n") : "No activity logged."}</div></div>`);
+  if (!r.finished_at) setTimeout(() => { if (parseHash().id === r.id && parseHash().view === "runs") openRun(r.id); }, 3000);
+}
+
+// ---------- routines ----------
+async function loadRoutines() {
+  const routines = await api(`routines?project=${encodeURIComponent(state.slug)}`);
+  const key = JSON.stringify(routines);
+  if (key === state.boardKey) return; state.boardKey = key;
+  $("#main").innerHTML = routines.length ? `<div class="tablewrap"><table>
+    <tr><th>Routine</th><th>Persona</th><th>Project</th><th>Schedule</th><th>Next</th><th>Last</th><th>Does</th></tr>
+    ${routines.map((r) => `<tr><td>${esc(r.name)}</td><td>${esc(r.persona)}</td><td>${esc(r.project ?? "all")}</td><td><code>${esc(r.schedule)}</code></td>
+      <td>${r.enabled ? when(r.next_run_at) : "paused"}</td>
+      <td>${r.last_run_id ? `<a href="#/${esc(state.slug)}/runs/${r.last_run_id}" class="st-${r.last_status}">#${r.last_run_id} ${r.last_status}</a>` : "-"}</td>
+      <td>${esc([r.playbook && `playbook ${r.playbook}`, r.prompt].filter(Boolean).join(" + ").slice(0, 120))}</td></tr>`).join("")}
+  </table><p class="muted">Add routines with <code>devit routine add</code>.</p></div>` : `<div class="empty">No routines. Add one with <code>devit routine add &lt;name&gt; --persona &lt;p&gt; --cron "0 9 * * 1" --playbook &lt;name&gt;</code>.</div>`;
+}
+
+// ---------- ask the lead ----------
+function renderChat() {
+  $("#drawerBody").innerHTML = state.chat.length ? state.chat.map((m) => m.me
+    ? `<div class="msg me pre">${esc(m.text)}</div>`
+    : `<div class="msg lead"><div class="pre">${m.text ? linkify(m.text) : `<span class="live">${esc(m.persona ?? "lead")} is working</span>`}</div>${m.steps?.length ? `<div class="steps">${m.steps.map(esc).join("<br>")}</div>` : ""}${m.run ? `<div class="steps"><a href="#/${esc(state.slug)}/runs/${m.run}">run #${m.run}</a></div>` : ""}</div>`).join("")
+    : `<p class="muted">Ask the lead about this project, or have it plan and hand out work. It answers in a minute or so and can create tasks on the board.</p>`;
+  $("#drawerBody").scrollTop = 1e9;
+}
+
+function openAsk() {
+  showDrawer("ask", `Ask the lead <span class="muted">· ${esc(state.slug)}</span>`, "", `
+    <form class="askbox" id="askForm">
+      <textarea name="message" placeholder="What is blocked? Plan the pricing page and split it into tasks… (Ctrl+Enter)" required></textarea>
+      <div class="row"><label class="muted"><input type="checkbox" name="cont" ${state.chat.length ? "checked" : ""}> Continue the conversation</label><button class="btn primary">Send</button></div>
+    </form>`);
+  renderChat();
+  const form = $("#askForm"); const ta = form.querySelector("textarea"); ta.focus();
+  ta.addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) form.requestSubmit(); });
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const f = new FormData(form); const message = String(f.get("message")).trim(); if (!message) return;
+    const btn = form.querySelector("button"); btn.disabled = true;
+    state.chat.push({ me: true, text: message });
+    const reply = { me: false, text: "", steps: [] }; state.chat.push(reply); renderChat();
+    try {
+      const run = await api("ask", { method: "POST", body: { project: state.slug, message, continue: f.get("cont") === "on" } });
+      reply.run = run.id; reply.persona = run.persona; ta.value = ""; form.querySelector("[name=cont]").checked = true;
+      while (true) {
+        await new Promise((r) => setTimeout(r, 1500));
+        const r = await api(`runs/${run.id}`);
+        reply.steps = r.events.filter((l) => l.startsWith("→ ")).slice(-6);
+        if (r.finished_at) { reply.text = r.status === "failed" ? `Failed: ${r.error}` : (r.output ?? r.summary ?? "(no answer)"); reply.steps = []; break; }
+        if ($("#drawer").dataset.kind === "ask") renderChat();
+      }
+    } catch (err) { reply.text = `Error: ${err.message}`; }
+    btn.disabled = false;
+    if ($("#drawer").dataset.kind === "ask") renderChat();
+    state.boardKey = ""; refresh();
+  });
+}
+$("#askBtn").addEventListener("click", openAsk);
+
+// ---------- start ----------
+$("#project").addEventListener("change", (e) => go(e.target.value));
+window.addEventListener("hashchange", route);
+(async function start() {
+  try {
+    const meta = await api("meta");
+    state.projects = meta.projects;
+    document.title = "Devit";
+    $("#project").innerHTML = meta.projects.map((p) => `<option value="${esc(p.slug)}">${esc(p.name)} (${p.open})</option>`).join("");
+    await route();
+  } catch (err) { $("#main").innerHTML = `<div class="empty">${esc(err.message)}</div>`; }
+  setInterval(() => { if (document.visibilityState === "visible" && state.slug) refresh(); }, 3000);
+})();
+</script>
+</body>
+</html>

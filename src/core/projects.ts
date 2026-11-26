@@ -21,6 +21,8 @@ export interface ProjectConfig {
   name: string;
   repo: string | null;
   base_branch: string;
+  /** GitHub issues with this label become tasks (default "devit"). */
+  issue_label?: string;
 }
 
 const SLUG_RE = /^[a-z0-9][a-z0-9-]{0,62}$/;
@@ -63,6 +65,7 @@ export function readProjectConfig(root: string): ProjectConfig {
     name: String(raw.name ?? slug),
     repo: raw.repo == null || raw.repo === "" ? null : String(raw.repo),
     base_branch: String(raw.base_branch ?? "main"),
+    ...(raw.issue_label ? { issue_label: String(raw.issue_label) } : {}),
   };
 }
 
@@ -76,6 +79,7 @@ export function writeProjectConfig(root: string, config: ProjectConfig): void {
     `name: ${JSON.stringify(config.name)}`,
     `repo: ${config.repo ?? "null"}`,
     `base_branch: ${config.base_branch}`,
+    ...(config.issue_label ? [`issue_label: ${JSON.stringify(config.issue_label)}`] : []),
     "",
   ];
   writeFileSync(projectFile(root), lines.join("\n"));
@@ -159,7 +163,7 @@ export function upsertProject(db: Database, root: string, config: ProjectConfig)
       return upsertProject(db, root, config);
     }
   }
-  const params = { ...config, path };
+  const params = { slug: config.slug, name: config.name, repo: config.repo, base_branch: config.base_branch, path };
   if (byPath) {
     db.query(
       `UPDATE projects SET slug = $slug, name = $name, repo = $repo, base_branch = $base_branch

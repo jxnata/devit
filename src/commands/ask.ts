@@ -1,7 +1,4 @@
-import { DevitError } from "../core/errors.ts";
-import { getPersona, leadPersona } from "../core/personas.ts";
-import { executeRun } from "../core/runner.ts";
-import { listRuns } from "../core/runs.ts";
+import { ask } from "../core/ask.ts";
 import { type Command, str } from "../framework.ts";
 
 export const askCommand: Command = {
@@ -23,47 +20,26 @@ Examples:
     quiet: { type: "boolean", short: "q", description: "print only the answer" },
   },
   async run(ctx) {
-    const message = ctx.positionals.join(" ").trim();
-    if (!message) throw new DevitError("what do you want to ask?", 'devit ask "..."');
-    const db = ctx.db();
-    const project = ctx.maybeProject();
-    const name = str(ctx.values.persona);
-    const persona = name ? getPersona(name, project?.path) : leadPersona(project?.path);
-    if (!persona) {
-      throw new DevitError("there is no lead persona", 'add one: devit persona add lead --role "Team lead" --lead');
-    }
-
-    let resume: string | null = null;
-    if (ctx.values.continue) {
-      const last = listRuns(db, { persona: persona.name, limit: 50 }).find(
-        (r) => r.trigger === "ask" && r.session_id && r.project_id === (project?.id ?? null),
-      );
-      if (!last) throw new DevitError(`no earlier conversation with ${persona.name} here`, "drop --continue to start one");
-      resume = last.session_id;
-    }
-
     const progress = !ctx.json && !ctx.values.quiet;
     const controller = new AbortController();
     const interrupt = () => controller.abort();
     process.once("SIGINT", interrupt);
-    const run = await executeRun({
-      db,
-      project,
-      persona,
-      prompt: message,
-      resume,
-      trigger: "ask",
+    const run = await ask({
+      db: ctx.db(),
+      project: ctx.maybeProject(),
+      message: ctx.positionals.join(" "),
+      persona: str(ctx.values.persona),
+      continue: Boolean(ctx.values.continue),
       signal: controller.signal,
       onEvent: progress
         ? (text) => {
             for (const line of text.split("\n")) if (line.startsWith("→ ")) ctx.out(`  ${line}`);
           }
         : undefined,
-    });
-    process.off("SIGINT", interrupt);
+    }).finally(() => process.off("SIGINT", interrupt));
     ctx.emit(run, () =>
       run.status === "failed"
-        ? `${persona.name} failed: ${run.error}`
+        ? `${run.persona} failed: ${run.error}`
         : `${progress ? "\n" : ""}${run.output ?? run.summary ?? "(no answer)"}`,
     );
     if (run.status === "failed") process.exitCode = 1;

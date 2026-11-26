@@ -29,7 +29,7 @@ report" is a normal outcome. For example: "If there are no new Sentry issues sin
 
 ## `devit serve`
 
-Routines and autopickup only happen while the daemon is running:
+Routines, autopickup, GitHub sync and the [web board](board.md) only happen while the daemon is running:
 
 ```sh
 devit serve                       # every 30 s: start what is due

@@ -166,7 +166,7 @@ describe("devit serve (daemon)", () => {
     makeDue("weekly");
     const env: Record<string, string | undefined> = { ...process.env, TZ: "UTC", ...fakeEnv("silent"), DEVIT_HOME: sb.home };
     delete env.DEVIT_PERSONA;
-    const daemon = Bun.spawn([process.execPath, resolve(import.meta.dir, "../src/cli.ts"), "serve", "--interval", "0.2"], {
+    const daemon = Bun.spawn([process.execPath, resolve(import.meta.dir, "../src/cli.ts"), "serve", "--interval", "0.2", "--no-web", "--sync-minutes", "0"], {
       cwd: sb.root,
       env,
       stdout: "pipe",
@@ -192,7 +192,7 @@ describe("devit serve (daemon)", () => {
     makeDue("slow");
     const env: Record<string, string | undefined> = { ...process.env, TZ: "UTC", ...fakeEnv("sleep"), DEVIT_HOME: sb.home };
     delete env.DEVIT_PERSONA;
-    const daemon = Bun.spawn([process.execPath, resolve(import.meta.dir, "../src/cli.ts"), "serve", "--interval", "0.2"], {
+    const daemon = Bun.spawn([process.execPath, resolve(import.meta.dir, "../src/cli.ts"), "serve", "--interval", "0.2", "--no-web", "--sync-minutes", "0"], {
       cwd: sb.root,
       env,
       stdout: "pipe",

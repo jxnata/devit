@@ -137,6 +137,27 @@ export function describeEvent(event: any): string | null {
   return null;
 }
 
+/** A run's log, read back: the human lines and the agent's final message. */
+export function readRunLog(id: number, maxLines = 400): { events: string[]; output: string | null } {
+  const file = runLogPath(id);
+  if (!existsSync(file)) return { events: [], output: null };
+  const events: string[] = [];
+  let output: string | null = null;
+  for (const line of readFileSync(file, "utf8").split("\n")) {
+    if (!line.trim()) continue;
+    let event: any;
+    try {
+      event = JSON.parse(line);
+    } catch {
+      continue;
+    }
+    if (event.type === "result" && typeof event.result === "string") output = event.result.trim() || null;
+    const text = describeEvent(event);
+    if (text) events.push(text);
+  }
+  return { events: events.slice(-maxLines), output };
+}
+
 // ---------- run ----------
 
 export interface ExecuteOptions extends Job {
