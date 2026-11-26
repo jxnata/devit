@@ -145,7 +145,7 @@ export function mainHelp(commands: Command[], version: string): string {
     "Commands:",
     ...rows.map(([u, s]) => `  ${u.padEnd(width)}  ${s}`),
     "",
-    "Run `devit <command> --help` for details. Docs: https://github.com/jxnata/devit/tree/main/docs",
+    "Run `devit <command> --help` for details. Docs: https://github.com/jxnata/devit/tree/master/docs",
     "",
   ].join("\n");
 }
