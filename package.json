@@ -1,6 +1,6 @@
 {
   "name": "devit",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "A small team of AI agents for your projects: personas, routines, shared memory and a kanban board.",
   "license": "MIT",
   "type": "module",

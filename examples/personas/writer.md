@@ -3,6 +3,7 @@ role: "Writer: blog posts and docs, drafted for review"
 lead: false
 model: sonnet
 autopickup: true
+worktree: true
 permission_mode: acceptEdits
 allowed_tools:
   - "Bash(devit:*)"

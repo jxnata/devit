@@ -9,6 +9,7 @@ import { listPersonas, type Persona } from "./personas.ts";
 import type { Project } from "./projects.ts";
 import { createRun, getRun, type Run, runLogPath, type Trigger, updateRun } from "./runs.ts";
 import { addComment, getTask, listComments, type Status, type Task, updateTask } from "./tasks.ts";
+import { cleanupWorktree, createWorktree } from "./worktrees.ts";
 
 // ---------- playbooks ----------
 
@@ -28,6 +29,8 @@ export function playbookPath(name: string, project: Project | null): string {
 export interface Job {
   project: Project | null;
   persona: Persona;
+  /** The git worktree this run works in, when the persona has `worktree: true`. */
+  worktree?: { path: string; base: string } | null;
   task?: Task | null;
   playbook?: string | null;
   /** Free text: the whole job, or extra instructions on top of a task or playbook. */
@@ -61,11 +64,15 @@ export function buildPrompt(job: Job, runId: number | null, db: Database): { sys
   const where = project
     ? `Project: ${project.name} (\`${project.slug}\`) at ${project.path}. GitHub repo: ${project.repo ?? "none"}. Base branch for PRs: ${project.base_branch}.`
     : "No project: you are working across projects.";
+  const worktree = job.worktree
+    ? `You are working in your own git worktree at ${job.worktree.path}, detached at ${job.worktree.base} (just fetched). Create your branch here and work only here: ${project?.path} is the human's checkout, never touch it. Dependencies are not installed in a new worktree: run the project's install command before builds or checks. Push your branch before you finish; the worktree is removed after the run if it has no uncommitted changes.`
+    : null;
   const system = [
     persona.instructions,
     "# Working in Devit",
     `You are "${persona.name}" (${persona.role}), a persona in Devit, running headless${runId ? ` as run #${runId}` : ""}. Today is ${new Date().toISOString().slice(0, 10)}.`,
     where,
+    ...(worktree ? [worktree] : []),
     CLI_GUIDE,
     ...(persona.lead ? [LEAD_GUIDE] : []),
     "# Memory",
@@ -199,9 +206,12 @@ export async function executeRun(opts: ExecuteOptions): Promise<RunResult> {
   });
   opts.onStart?.(run);
   let prompt: { system: string; user: string };
+  let worktree: { path: string; base: string } | null = null;
   try {
-    prompt = buildPrompt(opts, run.id, db);
+    if (persona.worktree && project) worktree = createWorktree(project, run.id);
+    prompt = buildPrompt({ ...opts, worktree }, run.id, db);
   } catch (err) {
+    if (worktree && project) cleanupWorktree(project, worktree.path);
     updateRun(db, run.id, { status: "failed", error: (err as Error).message, finished_at: now() });
     throw err;
   }
@@ -223,6 +233,7 @@ export async function executeRun(opts: ExecuteOptions): Promise<RunResult> {
   if (project) env.DEVIT_PROJECT = project.slug;
   else delete env.DEVIT_PROJECT;
   if (task) env.DEVIT_TASK_ID = String(task.id);
+  if (worktree) env.DEVIT_WORKTREE = worktree.path;
   delete env.CLAUDECODE; // a nested `claude -p` refuses to start inside a Claude Code session otherwise
 
   let result: any = null;
@@ -234,7 +245,7 @@ export async function executeRun(opts: ExecuteOptions): Promise<RunResult> {
   try {
     if (opts.signal?.aborted) throw new Error("interrupted");
     const child = Bun.spawn([claudeBin(), ...claudeArgs(persona, prompt.system, opts.resume)], {
-      cwd: project?.path ?? devitHome(),
+      cwd: worktree?.path ?? project?.path ?? devitHome(),
       env,
       stdin: new TextEncoder().encode(prompt.user),
       stdout: "pipe",
@@ -288,6 +299,7 @@ export async function executeRun(opts: ExecuteOptions): Promise<RunResult> {
     if (onAbort) opts.signal?.removeEventListener("abort", onAbort);
     await new Promise<void>((done) => log.end(done));
   }
+  const kept = worktree && project ? cleanupWorktree(project, worktree.path) : null;
 
   // Settle the run: the agent may already have reported done/silent.
   let final = getRun(db, run.id);
@@ -299,11 +311,16 @@ export async function executeRun(opts: ExecuteOptions): Promise<RunResult> {
     finished_at: now(),
   };
   if (error) {
-    final = updateRun(db, run.id, { ...usage, status: "failed", error });
+    final = updateRun(db, run.id, { ...usage, status: "failed", error: kept ? `${error} (${kept})` : error });
   } else if (final.status === "running") {
     final = updateRun(db, run.id, { ...usage, status: "done", summary: output?.slice(0, 1000) ?? null });
   } else {
     final = updateRun(db, run.id, usage);
+  }
+  if (kept && !error) {
+    // The run succeeded but left work behind: say where, on the run and the task.
+    final = updateRun(db, run.id, { error: kept });
+    if (task) addComment(db, task.id, "devit", `Run #${run.id}: ${kept}.`);
   }
 
   // Settle the task, unless the agent already moved it somewhere else.

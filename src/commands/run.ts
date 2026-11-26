@@ -1,3 +1,5 @@
+import { join } from "node:path";
+import { devitHome } from "../core/paths.ts";
 import { localTime, usd } from "../core/format.ts";
 import { existsSync, readFileSync } from "node:fs";
 import { DevitError } from "../core/errors.ts";
@@ -66,7 +68,9 @@ Examples:
       const job = { project, persona, task, playbook: str(ctx.values.playbook) ?? null, prompt: str(ctx.values.prompt) ?? null };
 
       if (ctx.values["dry-run"]) {
-        const prompt = buildPrompt(job, null, db);
+        // Show where the worktree would go; the real one is created per run.
+        const worktree = persona.worktree && project ? { path: join(devitHome(), "worktrees", project.slug, "run-<id>"), base: `origin/${project.base_branch}` } : null;
+        const prompt = buildPrompt({ ...job, worktree }, null, db);
         const args = claudeArgs(persona, "<system prompt>");
         ctx.emit({ command: [claudeBin(), ...args], cwd: project?.path ?? null, ...prompt }, () =>
           [

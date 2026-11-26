@@ -137,6 +137,37 @@ describe("devit run", () => {
     expect(after.comments.at(-1)?.body).toContain("failed: boom");
   });
 
+  test("worktree: true runs in a fresh worktree of the base branch, removed afterwards", () => {
+    const personaDir = join(dir, ".devit", "personas");
+    mkdirSync(personaDir, { recursive: true });
+    writeFileSync(join(personaDir, "builder.md"), "---\nrole: Builder\nworktree: true\n---\nYou build.\n");
+    const head = () => Bun.spawnSync(["git", "symbolic-ref", "--short", "HEAD"], { cwd: dir }).stdout.toString().trim();
+    const before = head();
+
+    const task = sb.json<Task>(["task", "add", "Build it", "-s", "todo"], { cwd: dir });
+    const run = sb.json<Run>(["run", "builder", "--task", String(task.id)], { cwd: dir, env: fakeEnv("report") });
+    expect(run.status).toBe("done");
+    const call = lastCall();
+    expect(call.cwd).toBe(join(sb.home, "worktrees", "shop", `run-${run.id}`));
+    expect(call.args.join(" ")).toContain("your own git worktree");
+    expect(existsSync(call.cwd)).toBe(false); // clean: removed
+    expect(head()).toBe(before); // the human's checkout never moved
+
+    const dry = sb.json<{ system: string }>(["run", "dev", "--prompt", "x", "--dry-run"], { cwd: dir });
+    expect(dry.system).not.toContain("own git worktree"); // only for personas that ask for it
+  });
+
+  test("a worktree with uncommitted work is kept, and the task says where", () => {
+    const task = sb.json<Task>(["task", "add", "Half done", "-s", "todo"], { cwd: dir });
+    const run = sb.json<Run>(["run", "builder", "--task", String(task.id)], { cwd: dir, env: fakeEnv("dirty") });
+    const path = join(sb.home, "worktrees", "shop", `run-${run.id}`);
+    expect(run).toMatchObject({ status: "done", error: `left the worktree at ${path}: it has uncommitted changes` });
+    expect(existsSync(join(path, "half-done.txt"))).toBe(true);
+    const after = sb.json<Task & { comments: { author: string; body: string }[] }>(["task", "show", String(task.id)], { cwd: dir });
+    expect(after.comments.at(-1)).toMatchObject({ author: "devit" });
+    Bun.spawnSync(["git", "worktree", "remove", "--force", path], { cwd: dir });
+  });
+
   test("timeout kills the agent", () => {
     const personaDir = join(dir, ".devit", "personas");
     mkdirSync(personaDir, { recursive: true });

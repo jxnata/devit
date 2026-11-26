@@ -25,6 +25,8 @@ export interface Persona {
   mcp_config: string[];
   max_budget_usd: number | null;
   timeout_minutes: number;
+  /** Runs in a fresh git worktree of the project's base branch instead of the human's checkout. */
+  worktree: boolean;
   /** The instructions: the markdown body. */
   instructions: string;
   /** Where it was loaded from. */
@@ -100,6 +102,7 @@ export function parsePersona(text: string, name: string, file: string, scope: Pe
     mcp_config: list(data.mcp_config, "mcp_config", file),
     max_budget_usd: positive(data.max_budget_usd, "max_budget_usd", file),
     timeout_minutes: positive(data.timeout_minutes, "timeout_minutes", file) ?? 30,
+    worktree: data.worktree === true,
     instructions: body,
     file,
     scope,
@@ -154,6 +157,7 @@ lead: ${input.lead ? "true" : "false"}
 model: ${input.model ?? "sonnet"}
 # effort: medium              # low, medium, high, xhigh, max
 autopickup: false             # true: works on tasks moved to todo and assigned to it
+worktree: false               # true: runs in its own git worktree, never in your checkout (for personas that change files)
 # Tools the agent may use without asking. Runs are headless: anything not allowed here is denied.
 allowed_tools:
   - "Bash(devit:*)"

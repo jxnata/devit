@@ -25,6 +25,7 @@ lead: false
 model: opus
 effort: high
 autopickup: true
+worktree: true
 allowed_tools:
   - "Bash(devit:*)"
   - "Bash(git:*)"
@@ -62,6 +63,7 @@ You fix bugs and build features in this repo.
 | `mcp_config` | none | MCP config files, relative to the persona file |
 | `max_budget_usd` | none | Stops the run past this cost |
 | `timeout_minutes` | `30` | Kills the run after this long |
+| `worktree` | `false` | Runs in its own git worktree of the base branch (freshly fetched), not in your checkout. Use it for personas that change files: your working copy never switches branch, and two personas can work on one repo at once. The worktree is removed after the run unless it has uncommitted changes |
 
 Runs are headless: nobody is there to approve a tool, so anything outside `allowed_tools` is denied.
 Allow what the persona needs and no more. `bypassPermissions` allows everything; use it only in a sandbox.

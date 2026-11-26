@@ -6,8 +6,9 @@
  *   silent  call `devit run silent`
  *   error   exit 1 with a message on stderr
  *   sleep   hang until killed (timeouts)
+ *   dirty   leave an uncommitted file in its folder, then report done
  */
-import { appendFileSync } from "node:fs";
+import { appendFileSync, writeFileSync } from "node:fs";
 
 const mode = process.env.FAKE_MODE ?? "report";
 const prompt = await new Response(Bun.stdin.stream()).text();
@@ -36,4 +37,8 @@ if (mode === "report") {
   devit("run", "done", "--summary", "Fixed the thing");
 }
 if (mode === "silent") devit("run", "silent");
+if (mode === "dirty") {
+  writeFileSync("half-done.txt", "wip\n");
+  devit("run", "done", "--summary", "Left work behind");
+}
 emit({ type: "result", subtype: "success", is_error: false, result: "Final answer text", total_cost_usd: 0.12, num_turns: 3, session_id: "sess-1" });
