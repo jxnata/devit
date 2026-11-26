@@ -117,7 +117,9 @@ describe("board API", () => {
 
   test("routines list", async () => {
     sb.json(["routine", "add", "nightly", "--persona", "dev", "--cron", "@daily", "--prompt", "check"], { cwd: dir });
-    expect((await call("/api/routines?project=web")).body.map((r: { name: string }) => r.name)).toEqual(["nightly"]);
+    const routines = (await call("/api/routines?project=web")).body;
+    expect(routines.map((r: { name: string }) => r.name)).toEqual(["nightly"]);
+    expect(routines[0].schedule_text).toBe("daily at 00:00");
   });
 });
 

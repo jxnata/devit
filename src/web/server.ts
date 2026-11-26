@@ -2,6 +2,7 @@ import type { Database } from "bun:sqlite";
 import { timingSafeEqual } from "node:crypto";
 import pkg from "../../package.json" with { type: "json" };
 import { ask } from "../core/ask.ts";
+import { describeCron, parseCron } from "../core/cron.ts";
 import { DevitError } from "../core/errors.ts";
 import { listPersonas } from "../core/personas.ts";
 import { getProjectBySlug, listProjects, type Project } from "../core/projects.ts";
@@ -83,11 +84,18 @@ function hostname(hostHeader: string): string {
 }
 
 const LOGIN_PAGE = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Devit</title><style>body{font:15px system-ui,sans-serif;display:grid;place-items:center;min-height:100vh;margin:0;background:#f6f6f4;color:#1c1c1a}
-@media(prefers-color-scheme:dark){body{background:#151513;color:#ecece8}input{background:#222;color:inherit;border-color:#444}}
-form{display:flex;gap:8px;flex-wrap:wrap;padding:16px}input{padding:8px 10px;border:1px solid #ccc;border-radius:6px;font:inherit;min-width:240px}
-button{padding:8px 14px;border-radius:6px;border:0;background:#2f6fde;color:#fff;font:inherit;cursor:pointer}</style></head>
-<body><form method="get" action="/"><input name="token" type="password" placeholder="Devit token" autofocus required><button>Open board</button></form></body></html>`;
+<title>Devit</title><style>
+:root{--bg:#f7f7f8;--panel:#fff;--line:#e4e4e7;--text:#18181b;--muted:#71717a;--accent:#4f46e5;color-scheme:light}
+@media(prefers-color-scheme:dark){:root{--bg:#0f0f11;--panel:#18181b;--line:#2a2a2f;--text:#f4f4f5;--muted:#a1a1aa;--accent:#818cf8;color-scheme:dark}}
+body{font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;display:grid;place-items:center;min-height:100vh;margin:0;background:var(--bg);color:var(--text);padding:16px;box-sizing:border-box}
+form{display:flex;flex-direction:column;gap:12px;width:min(340px,100%);background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:24px;box-shadow:0 8px 30px rgba(0,0,0,.06)}
+h1{font-size:18px;margin:0;display:flex;align-items:center;gap:10px}h1 i{width:22px;height:22px;border-radius:6px;background:var(--accent)}
+p{margin:0;color:var(--muted);font-size:13px}
+input{padding:10px 12px;border:1px solid var(--line);border-radius:8px;font:inherit;background:var(--bg);color:inherit}
+input:focus{outline:2px solid var(--accent);outline-offset:-1px}
+button{padding:10px 14px;border-radius:8px;border:0;background:var(--accent);color:#fff;font:inherit;font-weight:600;cursor:pointer}</style></head>
+<body><form method="get" action="/"><h1><i></i>Devit</h1><p>Enter the Devit token to open the board.</p>
+<input name="token" type="password" placeholder="Devit token" autofocus required><button>Open board</button></form></body></html>`;
 
 /** The board and its JSON API, served by `devit serve`. */
 export function startWeb(opts: WebOptions): WebServer {
@@ -219,7 +227,18 @@ export function startWeb(opts: WebOptions): WebServer {
     if (resource === "routines" && method === "GET" && !idText) {
       const slug = url.searchParams.get("project");
       const p = slug ? project(slug) : null;
-      return json(listRoutines(db).filter((r) => !p || r.project_id === p.id || r.project_id === null));
+      const describe = (schedule: string) => {
+        try {
+          return describeCron(parseCron(schedule));
+        } catch {
+          return schedule;
+        }
+      };
+      return json(
+        listRoutines(db)
+          .filter((r) => !p || r.project_id === p.id || r.project_id === null)
+          .map((r) => ({ ...r, schedule_text: describe(r.schedule) })),
+      );
     }
 
     if (resource === "ask" && method === "POST" && !idText) {
