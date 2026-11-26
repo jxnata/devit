@@ -1,0 +1,32 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
+      - run: bun install --frozen-lockfile
+      - run: git config --global user.name ci && git config --global user.email ci@example.com
+      - run: bun run typecheck
+      - run: bun test
+      - name: Check the tag matches package.json
+        run: test "v$(bun -e 'console.log(require("./package.json").version)')" = "$GITHUB_REF_NAME"
+      - run: bun scripts/build-release.ts
+      - name: Smoke-test the linux-x64 binary
+        run: tar -xzf dist/release/devit-linux-x64.tar.gz -C /tmp && /tmp/devit --version
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" dist/release/*.tar.gz dist/release/SHA256SUMS \
+            --title "Devit $GITHUB_REF_NAME" --generate-notes

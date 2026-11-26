@@ -14,5 +14,8 @@ Bun + TypeScript CLI. No runtime dependencies: use Bun built-ins (`bun:sqlite`, 
 - `bun run check` (typecheck + tests) must pass before committing. CLI tests run the real CLI in a sandbox
   (`test/helpers.ts`), with `DEVIT_HOME` in a temp folder. Runner tests use `test/fake-claude.ts`
   (`DEVIT_CLAUDE_BIN`) and `test/fake-gh.ts` (`DEVIT_GH_BIN`); never call the real `claude` or `gh` from tests.
+- Example personas and playbooks live in `examples/` and are embedded in the binary (text imports in
+  `src/core/examples.ts`); the agent skill is `src/skill/SKILL.md`. Releases: bump `package.json`,
+  push a `v<version>` tag, and `.github/workflows/release.yml` builds and publishes the binaries.
 - Code, docs and commit messages in English. The plan lives in `docs/roadmap.md`; the board of this
   project is in Devit itself (`devit task list`).

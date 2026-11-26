@@ -5,9 +5,12 @@ A persona is a markdown file: YAML frontmatter for its settings, the body for it
 - Global personas live in `~/.devit/personas/<name>.md` and work in every project.
 - A project can override one with `<repo>/.devit/personas/<name>.md` (same name, whole file replaced).
 
-Create one from the template and edit it:
+Start from an example (`devit persona examples`: lead, dev, pm, writer, reviewer), or from the blank
+template, and edit the file:
 
 ```sh
+devit persona add dev --from dev
+devit persona add writer --from writer --model opus
 devit persona add dev --role "Developer" --model opus
 devit persona add pm --role "Project manager" --lead
 devit persona show dev

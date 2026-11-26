@@ -246,15 +246,34 @@ Usage: devit persona add <name> [options]
 Writes ~/.devit/personas/<name>.md (or .devit/personas/ in the project with --local).
 Edit the file to set its tools, model and instructions; see docs/personas.md.
 
-Example:
+--from copies a ready-made persona (see `devit persona examples`); --role, --model and --lead
+override its settings.
+
+Examples:
   devit persona add dev --role "Developer" --model opus
+  devit persona add dev --from dev
+  devit persona add boss --from lead
 
 Options:
       --role <text>          one-line role, e.g. "Developer"
       --model <model>        model alias or id (default: sonnet)
       --lead                 make it the lead persona, which answers `devit ask`
   -i, --instructions <text>  the persona's instructions (default: a placeholder)
+      --from <example>       start from an example: lead, dev, pm, writer, reviewer
       --local                the current project's .devit/personas/ instead of the global folder
+
+Global options:
+  -p, --project <slug>  project to act on (default: the .devit/ above the current directory)
+      --json            print JSON instead of text
+  -h, --help            show help
+```
+
+## devit persona examples
+
+```
+List the ready-made personas you can start from
+
+Usage: devit persona examples [options]
 
 Global options:
   -p, --project <slug>  project to act on (default: the .devit/ above the current directory)
@@ -271,6 +290,69 @@ Usage: devit persona remove <name> [options]
 
 Options:
       --local  the current project's .devit/personas/ instead of the global folder
+
+Global options:
+  -p, --project <slug>  project to act on (default: the .devit/ above the current directory)
+      --json            print JSON instead of text
+  -h, --help            show help
+```
+
+## devit playbook list
+
+```
+List playbooks (the project's, then global ones)
+
+Usage: devit playbook list [options]
+
+Global options:
+  -p, --project <slug>  project to act on (default: the .devit/ above the current directory)
+      --json            print JSON instead of text
+  -h, --help            show help
+```
+
+## devit playbook show
+
+```
+Print a playbook
+
+Usage: devit playbook show <name> [options]
+
+Global options:
+  -p, --project <slug>  project to act on (default: the .devit/ above the current directory)
+      --json            print JSON instead of text
+  -h, --help            show help
+```
+
+## devit playbook examples
+
+```
+List the ready-made playbooks you can start from
+
+Usage: devit playbook examples [options]
+
+Global options:
+  -p, --project <slug>  project to act on (default: the .devit/ above the current directory)
+      --json            print JSON instead of text
+  -h, --help            show help
+```
+
+## devit playbook add
+
+```
+Create a playbook from a template or an example
+
+Usage: devit playbook add <name> [options]
+
+Writes .devit/playbooks/<name>.md in the current project (commit it), or ~/.devit/playbooks/ with
+--global. Then edit it, and use it with `devit run <persona> --playbook <name>` or a routine.
+
+Examples:
+  devit playbook add weekly-report --from weekly-report
+  devit playbook add release-notes
+
+Options:
+      --from <example>  start from an example (see `devit playbook examples`)
+      --global          for every project, in ~/.devit/playbooks/
 
 Global options:
   -p, --project <slug>  project to act on (default: the .devit/ above the current directory)
@@ -566,6 +648,60 @@ Devit only reads from GitHub. `devit serve` runs this every 15 minutes.
 
 Options:
   -a, --all  every project with a repo
+
+Global options:
+  -p, --project <slug>  project to act on (default: the .devit/ above the current directory)
+      --json            print JSON instead of text
+  -h, --help            show help
+```
+
+## devit skill install
+
+```
+Install the devit skill so Claude Code and Codex can drive Devit
+
+Usage: devit skill install [options]
+
+Writes SKILL.md to ~/.claude/skills/devit/ (and ~/.codex/skills/devit/, ~/.agents/skills/devit/ when
+those agents are installed). Run it again after upgrading Devit to update the skill. With --repo,
+it goes into the current project instead (.claude/skills/devit/…), to commit with the code.
+
+Then, in a Claude Code or Codex session, ask things like "add a task for dev to fix the login bug",
+"what did the team do this week?" or "ask the lead to plan the pricing page".
+
+Options:
+      --for <agent>  claude, codex, agents or all (default: claude + the ones installed)
+      --repo         in the current project's repo (.claude/skills/…) instead of your home folder
+
+Global options:
+  -p, --project <slug>  project to act on (default: the .devit/ above the current directory)
+      --json            print JSON instead of text
+  -h, --help            show help
+```
+
+## devit skill uninstall
+
+```
+Remove the devit skill
+
+Usage: devit skill uninstall [options]
+
+Options:
+      --for <agent>  claude, codex, agents or all (default: claude + the ones installed)
+      --repo         in the current project's repo (.claude/skills/…) instead of your home folder
+
+Global options:
+  -p, --project <slug>  project to act on (default: the .devit/ above the current directory)
+      --json            print JSON instead of text
+  -h, --help            show help
+```
+
+## devit skill show
+
+```
+Print the skill (SKILL.md)
+
+Usage: devit skill show [options]
 
 Global options:
   -p, --project <slug>  project to act on (default: the .devit/ above the current directory)

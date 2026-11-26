@@ -142,6 +142,8 @@ export interface NewPersona {
   model?: string;
   lead?: boolean;
   instructions?: string;
+  /** Whole file content (e.g. an example) instead of the template. */
+  text?: string;
 }
 
 export function personaTemplate(input: NewPersona): string {
@@ -174,8 +176,10 @@ export function addPersona(input: NewPersona, dir: string): string {
   assertPersonaName(input.name);
   const file = join(dir, `${input.name}.md`);
   if (existsSync(file)) throw new DevitError(`persona "${input.name}" already exists at ${file}`);
+  const text = input.text ?? personaTemplate(input);
+  parsePersona(text, input.name, file, "global"); // never write a file that won't load
   mkdirSync(dir, { recursive: true });
-  writeFileSync(file, personaTemplate(input));
+  writeFileSync(file, text);
   return file;
 }
 
